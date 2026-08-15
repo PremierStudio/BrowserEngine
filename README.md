@@ -139,6 +139,7 @@ Author with `run_flow` until every bind is unique, write the JSON (no uids), the
 | Doc                                  | What is in it                                           |
 | ------------------------------------ | ------------------------------------------------------- |
 | [Usage](docs/usage.md)               | MCP, desk/page/intent tools, env, public-site demos     |
+| [Install](docs/install.md)           | npm package on the Premier Studio Forgejo registry      |
 | [CI](docs/ci.md)                     | `compile` / `run` on GitHub, GitLab, Forgejo, Bitbucket |
 | [Architecture](docs/architecture.md) | Engine, clients, page model, what is not in this repo   |
 | [Engineering](docs/engineering.md)   | `npm run ci`, 100/100 gates, stack                      |

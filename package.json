@@ -1,7 +1,7 @@
 {
-  "name": "browser-engine",
+  "name": "@premierstudio/browser-agent",
   "version": "0.0.1",
-  "private": true,
+  "private": false,
   "description": "An agent explores the product. CI replays the path with no AI. A broken step is a named report.",
   "license": "Apache-2.0",
   "repository": {
@@ -9,6 +9,18 @@
     "url": "git+https://github.com/PremierStudio/BrowserEngine.git"
   },
   "type": "module",
+  "bin": {
+    "browser-agent": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "registry": "https://git.taild1bbf.ts.net/api/packages/PremierStudio/npm/"
+  },
   "engines": {
     "node": ">=20.19.0"
   },

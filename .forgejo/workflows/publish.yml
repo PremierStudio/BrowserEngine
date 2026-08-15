@@ -1,0 +1,82 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  NPM_REGISTRY: https://git.taild1bbf.ts.net/api/packages/PremierStudio/npm/
+  FORGEJO_API: https://git.taild1bbf.ts.net/api/v1
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq git
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Full gates (typecheck, lint, format, knip, tests, coverage, mutation)
+        run: npm run ci
+
+      - name: Build
+        run: npm run build
+
+  publish:
+    needs: gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq git
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "tag v$TAG does not match package.json version $VERSION"
+            exit 1
+          fi
+
+      - name: Pack
+        run: npm pack
+
+      - name: Configure npm registry
+        run: |
+          AUTH_KEY="//$(printf '%s' "$NPM_REGISTRY" | sed -e 's|^https://||' -e 's|/$||')/:_authToken"
+          npm config set @premierstudio:registry "$NPM_REGISTRY"
+          npm config set "$AUTH_KEY" "$PACKAGES_TOKEN"
+        env:
+          PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+
+      - name: Publish
+        run: npm publish
+
+      - name: Create release with package tarball
+        run: |
+          TARBALL=$(ls ./*.tgz)
+          curl -sf -X POST \
+            -H "Authorization: token $PACKAGES_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d "{\"tag_name\":\"$GITHUB_REF_NAME\",\"name\":\"$GITHUB_REF_NAME\",\"target\":\"master\"}" \
+            "$FORGEJO_API/repos/PremierStudio/BrowserAgent/releases" -o /tmp/release.json
+          RELEASE_ID=$(node -p "JSON.parse(require('node:fs').readFileSync('/tmp/release.json', 'utf8')).id")
+          curl -sf -X POST \
+            -H "Authorization: token $PACKAGES_TOKEN" \
+            -F "attachment=@$TARBALL" \
+            "$FORGEJO_API/repos/PremierStudio/BrowserAgent/releases/$RELEASE_ID/assets?name=$(basename "$TARBALL")"
+        env:
+          PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
