@@ -18,9 +18,6 @@
     "README.md",
     "LICENSE"
   ],
-  "publishConfig": {
-    "registry": "https://git.taild1bbf.ts.net/api/packages/PremierStudio/npm/"
-  },
   "engines": {
     "node": ">=20.19.0"
   },

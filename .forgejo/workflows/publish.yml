@@ -6,8 +6,8 @@ on:
       - 'v*'
 
 env:
-  NPM_REGISTRY: https://git.taild1bbf.ts.net/api/packages/PremierStudio/npm/
-  FORGEJO_API: https://git.taild1bbf.ts.net/api/v1
+  NPM_REGISTRY: http://premier-forgejo:3000/api/packages/PremierStudio/npm/
+  FORGEJO_API: http://premier-forgejo:3000/api/v1
 
 jobs:
   gates:
@@ -56,7 +56,7 @@ jobs:
 
       - name: Configure npm registry
         run: |
-          AUTH_KEY="//$(printf '%s' "$NPM_REGISTRY" | sed -e 's|^https://||' -e 's|/$||')/:_authToken"
+          AUTH_KEY="//$(printf '%s' "$NPM_REGISTRY" | sed -e 's|^https\?://||' -e 's|/$||')/:_authToken"
           npm config set @premierstudio:registry "$NPM_REGISTRY"
           npm config set "$AUTH_KEY" "$PACKAGES_TOKEN"
         env:
