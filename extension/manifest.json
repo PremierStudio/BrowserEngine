@@ -11,7 +11,8 @@
     "activeTab",
     "storage",
     "sidePanel",
-    "commands"
+    "commands",
+    "tabGroups"
   ],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {

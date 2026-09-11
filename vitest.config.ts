@@ -27,6 +27,8 @@ export default defineConfig({
         'src/extension/panel.ts',
         'src/extension/options.ts',
         'src/extension/nativeHost.ts',
+        // Injected page overlay: evaluated over CDP into the controlled tab.
+        'src/extension/hudOverlay.ts',
       ],
       thresholds: {
         lines: 100,

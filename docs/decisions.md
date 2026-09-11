@@ -133,3 +133,27 @@ amendments take precedence over the corresponding lines of `mvp.md`.
 27. No core product code before M0 is proven green (hard gate from mvp.md).
     "Core product code" was anything under `src/` beyond the M0 smoke module.
     That smoke module is gone; the gate is the current `src/` tree.
+
+## Extension control HUD (v0.2)
+
+30. **Three signals, one setting.** While the engine is attached to a tab the
+    extension shows, in order of visibility: a per-tab toolbar badge
+    (`ON` / `||`), a colored `BrowserEngine` tab group plus a `● ` document
+    title marker, and an in-page overlay (viewport frame, state pill, action
+    cursor with click ripple and typing hints). The `showHud` setting (default
+    true) gates all three; detach, pause, disconnect, or tab close restores the
+    tab — ungroup, title, badge, overlay removed.
+31. **The overlay rides the CDP relay.** The extension already forwards every
+    debugger command; the background derives cursor/typing/scroll/navigate
+    events from `Input.*` and `Page.navigate` traffic (`hudSignals.ts`) and
+    evaluates them into the injected script. No engine-side API changes.
+32. **Injected as source, not imported.** `hudOverlay.ts` is a plain script
+    compiled flat to `extension/hudOverlay.js`, fetched by the service worker
+    and installed via `Page.addScriptToEvaluateOnNewDocument` plus one
+    evaluation for the current document. It is an entry point excluded from
+    coverage/mutation, while every decision it consumes (`hudSignals`,
+    `hudTitle`, `hudState`) is unit-tested to 100%.
+33. **Strict pages.** Overlay styles use a constructable stylesheet on a shadow
+    root (no inline styles, no page CSS leakage); the host takes no pointer
+    events and is `aria-hidden`. Where CDP is unavailable, the browser-chrome
+    signals still show.

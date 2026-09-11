@@ -3,42 +3,40 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
     <title>BrowserEngine settings</title>
     <link rel="stylesheet" href="ui.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <div class="app">
-      <header class="app-top options-top">
-        <div class="brand">
-          <div class="mark">BE</div>
-          <div class="brand-copy">
-            <strong>BROWSERENGINE</strong>
-            <span>Settings</span>
+      <header class="top options-top">
+        <div class="options-top-lead">
+          <div class="brand">
+            <div class="mark" aria-hidden="true">BE</div>
+            <div class="brand-copy">
+              <strong>BROWSERENGINE</strong>
+            </div>
           </div>
+          <span class="options-top-sep" aria-hidden="true"></span>
+          <h1>Engine settings</h1>
         </div>
         <p class="toast options-status" id="status" role="status" aria-live="polite">Loading…</p>
       </header>
       <div class="app-body options-body">
         <nav class="options-nav" id="nav" aria-label="Settings groups"></nav>
         <main class="content options-content">
-          <div class="page-head">
-            <div>
-              <h1>Engine settings</h1>
-              <p>Every cockpit and engine knob, applied to this browser profile.</p>
-            </div>
-          </div>
           <div class="form" id="form"></div>
         </main>
       </div>
       <footer class="options-savebar">
         <div class="actions">
-          <button class="btn" id="export" type="button">Export JSON</button>
-          <button class="btn" id="import" type="button">Import JSON</button>
+          <button class="btn ghost" id="export" type="button">Export JSON</button>
+          <button class="btn ghost" id="import" type="button">Import JSON</button>
           <input id="importFile" type="file" accept="application/json" hidden />
         </div>
         <div class="actions">
-          <button class="btn danger" id="reset" type="button">Reset defaults</button>
+          <button class="btn ghost" id="reset" type="button">Reset defaults</button>
           <button class="btn primary" id="save" type="button">Save changes</button>
         </div>
       </footer>

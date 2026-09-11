@@ -55,6 +55,7 @@ function setDotTone(id: string, tone: DotTone): void {
   dot.classList.toggle('on', tone === 'on')
   dot.classList.toggle('warn', tone === 'warn')
   dot.classList.toggle('off', tone === 'off')
+  dot.classList.toggle('idle', tone === 'idle')
 }
 
 function setPillTone(id: string, tone: PillTone): void {
@@ -82,13 +83,10 @@ function summarize(flags: CockpitFlags): StateSummary {
     return { label: 'Paused', tone: 'warn' }
   }
   if (flags.pending) {
-    return { label: 'Pending', tone: 'warn' }
-  }
-  if (flags.engineConnected === false) {
-    return { label: 'Waiting', tone: 'warn' }
+    return { label: 'Waiting for allow', tone: 'warn' }
   }
   if (flags.attachedTabId !== undefined) {
-    return { label: 'Attached', tone: 'ok' }
+    return { label: 'Controlling', tone: 'ok' }
   }
   return { label: 'Ready', tone: 'ok' }
 }
@@ -126,47 +124,65 @@ function command(method: string, params?: Record<string, unknown>): Promise<Comm
   })
 }
 
+let attached = false
+
 async function refresh(): Promise<void> {
   const payload = await command('status')
   const result = isRecord(payload.reply.result) ? payload.reply.result : {}
   const settings = isRecord(result.settings) ? result.settings : {}
   const paused = settings.paused === true
-  const attached = result.attachedTabId
+  const attachedTabId = typeof result.attachedTabId === 'number' ? result.attachedTabId : undefined
   const flags: CockpitFlags = {
     hostConnected: payload.hostConnected,
     engineConnected: payload.engineConnected,
     paused,
     pending: Boolean(result.pending),
-    attachedTabId: typeof attached === 'number' ? attached : undefined,
+    attachedTabId,
   }
+
+  attached = attachedTabId !== undefined
   elementById('line').textContent = cockpitHeadline(flags)
   elementById('host').textContent = flags.hostConnected ? 'up' : 'down'
   elementById('engine').textContent = flags.engineConnected ? 'live' : 'waiting'
   elementById('attach').textContent = paused
     ? 'paused'
-    : attached === undefined
+    : attachedTabId === undefined
       ? 'none'
-      : `tab ${attached}`
+      : `tab ${attachedTabId}`
   setDotTone('hostDot', flags.hostConnected ? 'on' : 'off')
   setDotTone('engineDot', flags.engineConnected ? 'on' : 'warn')
-  setDotTone('attachDot', paused ? 'warn' : typeof attached === 'number' ? 'on' : 'idle')
+  setDotTone('attachDot', paused ? 'warn' : attachedTabId === undefined ? 'idle' : 'on')
+
   const summary = summarize(flags)
   elementById('stateText').textContent = summary.label
   setPillTone('statePill', summary.tone)
   setDotTone('stateDot', dotFor(summary.tone))
+
+  elementById('open').textContent = attached ? 'Open cockpit' : 'Control this tab'
   elementById('resume').hidden = !paused
   elementById('kill').hidden = paused
+  elementById('kill').setAttribute('aria-pressed', String(paused))
+  elementById('resume').setAttribute('aria-pressed', String(paused))
 }
 
-elementById('open').addEventListener('click', () => {
+function openCockpit(): void {
   chrome.runtime.sendMessage<OpenPanelMessage, unknown>({ type: 'openPanel' }, () => {
     void chrome.runtime.lastError
     window.close()
   })
-})
-elementById('options').addEventListener('click', () => {
-  chrome.runtime.sendMessage<OpenOptionsMessage, unknown>({ type: 'openOptions' }, () => {
-    void chrome.runtime.lastError
+}
+
+elementById('open').addEventListener('click', () => {
+  if (attached) {
+    openCockpit()
+    return
+  }
+  void command('attach').then((payload) => {
+    if (payload.reply.ok) {
+      openCockpit()
+      return
+    }
+    elementById('line').textContent = payload.reply.error ?? 'Attach failed'
   })
 })
 elementById('kill').addEventListener('click', () => {
@@ -176,6 +192,11 @@ elementById('kill').addEventListener('click', () => {
 })
 elementById('resume').addEventListener('click', () => {
   void command('pause', { paused: false }).then(refresh)
+})
+elementById('options').addEventListener('click', () => {
+  chrome.runtime.sendMessage<OpenOptionsMessage, unknown>({ type: 'openOptions' }, () => {
+    void chrome.runtime.lastError
+  })
 })
 
 void refresh()

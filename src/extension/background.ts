@@ -1,5 +1,13 @@
+import { badgeSpec, groupSpec, hudEventExpression, type HudState } from './hudState.js'
+import { signalFromCdp } from './hudSignals.js'
+import { titleMarkExpression, titleUnmarkExpression } from './hudTitle.js'
 import { bindNativePort, takeLastError } from './nativePort.js'
-import { createExtensionSession, type SessionRequest, type TabInfo } from './session.js'
+import {
+  createExtensionSession,
+  type SessionReply,
+  type SessionRequest,
+  type TabInfo,
+} from './session.js'
 
 const HOST_NAME = 'ai.premierstudio.browser_engine'
 
@@ -123,6 +131,197 @@ async function refreshBadge(): Promise<void> {
   setBadge('ok', '#166534')
 }
 
+/* --------------------------------------------------------------------------
+   Remote-control signals: tab group, title marker, per-tab badge, page HUD.
+   -------------------------------------------------------------------------- */
+
+let controlledTabId: number | undefined
+let controlledGroupId: number | undefined
+let hudInstalled = false
+let hudScriptId: string | undefined
+let hudSource: string | undefined
+
+function readTabId(result: unknown): number | undefined {
+  if (isRecord(result) === false) {
+    return undefined
+  }
+  const tabId = result.tabId
+  return typeof tabId === 'number' && Number.isFinite(tabId) ? tabId : undefined
+}
+
+async function hudAllowed(): Promise<boolean> {
+  try {
+    const stored = await chrome.storage.local.get('settings')
+    return isRecord(stored.settings) === false || stored.settings.showHud !== false
+  } catch {
+    return true
+  }
+}
+
+async function evaluateInTab(tabId: number, expression: string): Promise<void> {
+  try {
+    await chrome.debugger.sendCommand({ tabId }, 'Runtime.evaluate', { expression })
+  } catch {
+    // Detached, tab gone, or a page that forbids evaluation.
+  }
+}
+
+async function getHudSource(): Promise<string | undefined> {
+  if (hudSource !== undefined) {
+    return hudSource
+  }
+  try {
+    const response = await fetch(chrome.runtime.getURL('hudOverlay.js'))
+    if (response.ok) {
+      hudSource = await response.text()
+    }
+  } catch {
+    hudSource = undefined
+  }
+  return hudSource
+}
+
+async function setHudState(state: HudState): Promise<void> {
+  if (controlledTabId === undefined || hudInstalled === false) {
+    return
+  }
+  await evaluateInTab(
+    controlledTabId,
+    `window.__browserEngineHud && window.__browserEngineHud.setState(${JSON.stringify(state)})`,
+  )
+}
+
+async function paintChrome(state: HudState): Promise<void> {
+  const tabId = controlledTabId
+  if (tabId === undefined) {
+    return
+  }
+  const spec = groupSpec(state)
+  const badge = badgeSpec(state)
+  if (state !== 'off' && chrome.tabGroups !== undefined) {
+    try {
+      if (controlledGroupId === undefined) {
+        controlledGroupId = await chrome.tabs.group({ tabIds: [tabId] })
+      }
+      await chrome.tabGroups.update(controlledGroupId, { title: spec.title, color: spec.color })
+    } catch {
+      controlledGroupId = undefined
+    }
+  }
+  try {
+    await chrome.action.setBadgeText({ tabId, text: badge.text })
+    await chrome.action.setBadgeBackgroundColor({ tabId, color: badge.color })
+  } catch {
+    // The tab closed between attach and paint.
+  }
+  if (state === 'active') {
+    await evaluateInTab(tabId, titleMarkExpression())
+  }
+}
+
+async function installHud(tabId: number): Promise<void> {
+  if ((await hudAllowed()) === false) {
+    return
+  }
+  const source = await getHudSource()
+  if (source === undefined) {
+    return
+  }
+  try {
+    const result = await chrome.debugger.sendCommand(
+      { tabId },
+      'Page.addScriptToEvaluateOnNewDocument',
+      { source },
+    )
+    if (isRecord(result) && typeof result.identifier === 'string') {
+      hudScriptId = result.identifier
+    }
+  } catch {
+    hudScriptId = undefined
+  }
+  await evaluateInTab(tabId, source)
+  hudInstalled = true
+  await setHudState('active')
+}
+
+async function markControlled(tabId: number): Promise<void> {
+  controlledTabId = tabId
+  await paintChrome('active')
+  await installHud(tabId)
+  broadcast()
+}
+
+async function clearControlled(): Promise<void> {
+  const tabId = controlledTabId
+  controlledTabId = undefined
+  controlledGroupId = undefined
+  if (tabId === undefined) {
+    return
+  }
+  if (hudScriptId !== undefined) {
+    try {
+      await chrome.debugger.sendCommand({ tabId }, 'Page.removeScriptToEvaluateOnNewDocument', {
+        identifier: hudScriptId,
+      })
+    } catch {
+      // Already detached.
+    }
+  }
+  if (hudInstalled) {
+    await evaluateInTab(tabId, 'window.__browserEngineHud && window.__browserEngineHud.destroy()')
+  }
+  hudInstalled = false
+  hudScriptId = undefined
+  await evaluateInTab(tabId, titleUnmarkExpression())
+  try {
+    await chrome.tabs.ungroup(tabId)
+  } catch {
+    // Tab closed or grouping unsupported.
+  }
+  try {
+    await chrome.action.setBadgeText({ tabId, text: '' })
+    await chrome.action.setBadgeBackgroundColor({ tabId, color: '#000000' })
+  } catch {
+    // Tab gone.
+  }
+  broadcast()
+}
+
+async function handleControlTraffic(request: SessionRequest, reply: SessionReply): Promise<void> {
+  if (request.method === 'attach' && reply.ok === true) {
+    const tabId = readTabId(reply.result)
+    if (tabId !== undefined) {
+      await markControlled(tabId)
+    }
+    return
+  }
+  if (request.method === 'detach') {
+    await clearControlled()
+    return
+  }
+  if (request.method === 'pause') {
+    if (controlledTabId !== undefined) {
+      const state: HudState = request.params?.paused === true ? 'paused' : 'active'
+      await paintChrome(state)
+      await setHudState(state)
+    }
+    return
+  }
+  if (request.method !== 'cdp' || controlledTabId === undefined || hudInstalled === false) {
+    return
+  }
+  const params = request.params
+  if (params === undefined) {
+    return
+  }
+  const method = typeof params.method === 'string' ? params.method : ''
+  const cdpParams = isRecord(params.params) ? params.params : undefined
+  const event = signalFromCdp(method, cdpParams)
+  if (event !== undefined) {
+    await evaluateInTab(controlledTabId, hudEventExpression(event))
+  }
+}
+
 function isRuntimePort(value: unknown): value is chrome.runtime.Port {
   return (
     typeof value === 'object' &&
@@ -157,14 +356,19 @@ function connectNative(): void {
     void (async () => {
       if (isRecord(message) && message.event === 'engine') {
         engineConnected = message.connected === true
+        if (engineConnected === false) {
+          await clearControlled()
+        }
         await refreshBadge()
         broadcast()
         return
       }
-      const reply = await session.handle(asSessionRequest(message))
+      const request = asSessionRequest(message)
+      const reply = await session.handle(request)
       if (nativePort !== null) {
         nativePort.postMessage(reply)
       }
+      await handleControlTraffic(request, reply)
       await refreshBadge()
       broadcast()
     })()
@@ -173,6 +377,7 @@ function connectNative(): void {
     takeLastError(chrome.runtime)
     nativePort = null
     engineConnected = false
+    void clearControlled()
     setBadge('!', '#b91c1c')
     broadcast()
     setTimeout(connectNative, 1500)
@@ -185,14 +390,20 @@ async function openCockpit(): Promise<void> {
     await chrome.tabs.create({ url: chrome.runtime.getURL('panel.html') })
     return
   }
-  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-  const tab = tabs[0]
-  if (tab?.windowId !== undefined) {
-    if (typeof tab.id === 'number') {
-      await chrome.sidePanel.open({ windowId: tab.windowId, tabId: tab.id })
-      return
+  try {
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+    const tab = tabs[0]
+    if (tab?.windowId !== undefined) {
+      if (typeof tab.id === 'number') {
+        await chrome.sidePanel.open({ windowId: tab.windowId, tabId: tab.id })
+        return
+      }
+      await chrome.sidePanel.open({ windowId: tab.windowId })
     }
-    await chrome.sidePanel.open({ windowId: tab.windowId })
+  } catch {
+    // sidePanel.open() requires a user gesture; when this runs from a message
+    // or a command that lost it, open the cockpit as a normal tab instead.
+    await chrome.tabs.create({ url: chrome.runtime.getURL('panel.html') })
   }
 }
 
@@ -232,9 +443,16 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === 'kill-switch') {
-    void session
-      .handle({ id: 'kill', method: 'pause', params: { paused: true } })
-      .then(() => session.handle({ id: 'kill-detach', method: 'detach' }))
+    void (async () => {
+      const pauseRequest = { id: 'kill', method: 'pause', params: { paused: true } }
+      const paused = await session.handle(pauseRequest)
+      await handleControlTraffic(pauseRequest, paused)
+      const detachRequest = { id: 'kill-detach', method: 'detach' }
+      const detached = await session.handle(detachRequest)
+      await handleControlTraffic(detachRequest, detached)
+      await refreshBadge()
+      broadcast()
+    })()
     return
   }
   if (command === 'open-cockpit') {
@@ -242,7 +460,10 @@ chrome.commands.onCommand.addListener((command) => {
   }
 })
 
-chrome.debugger.onDetach.addListener(() => {
+chrome.debugger.onDetach.addListener((source) => {
+  if (source.tabId === controlledTabId) {
+    void clearControlled()
+  }
   void refreshBadge()
   broadcast()
 })
@@ -250,7 +471,10 @@ chrome.debugger.onDetach.addListener(() => {
 chrome.tabs.onUpdated.addListener(() => {
   broadcast()
 })
-chrome.tabs.onRemoved.addListener(() => {
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (tabId === controlledTabId) {
+    void clearControlled()
+  }
   broadcast()
 })
 chrome.tabs.onActivated.addListener(() => {

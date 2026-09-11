@@ -15,6 +15,19 @@ Source of truth: `src/extension/settings.ts` + `src/extension/session.ts`.
 The service worker (`src/extension/background.ts`) is a chrome adapter. MCP
 `extension_*` tools relay the same session methods.
 
+## Remote-control indicators
+
+While attached, the extension makes control obvious:
+
+- per-tab toolbar badge (`ON` green, `||` amber when paused);
+- the controlled tab is grouped under a colored **BrowserEngine** tab group,
+  and its title gains a `● ` marker;
+- the page gets a viewport frame, a state pill, and the action cursor with
+  click ripples and typing hints.
+
+All of it is gated by the **Control HUD** setting (default on) and is removed
+on detach, pause, disconnect, or tab close.
+
 ## Install
 
 1. `npm run build`

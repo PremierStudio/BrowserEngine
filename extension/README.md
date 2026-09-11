@@ -49,5 +49,19 @@ Vivaldi, Opera). It drives **your** profile: no second browser, no
 Attach policy defaults to **origin allow-list**. A new host prompts in the
 cockpit; Allow adds it. Kill (`Ctrl+Shift+U`) pauses attach/CDP.
 
+## Under remote control
+
+When the engine attaches, the extension makes it obvious:
+
+- the controlled tab is grouped under a colored **BrowserEngine** tab group,
+  its title gains a `● ` marker, and the toolbar shows a per-tab `ON` badge
+  (amber `||` when paused);
+- the page gets a viewport frame, a "BrowserEngine is controlling this tab"
+  pill, and an action cursor with click ripples and typing hints;
+- everything is removed on detach, pause, kill switch, or tab close.
+
+Turn the in-page overlay off (the tab group and badge stay) with **Control HUD**
+in the options page.
+
 MCP tools: `extension_status`, `extension_get_settings`,
 `extension_set_settings`, `extension_allow_origin`, `extension_deny_origin`.

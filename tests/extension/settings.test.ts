@@ -59,6 +59,7 @@ describe('parseSettings', () => {
       headed: false,
       logNativeHost: false,
       showBadge: false,
+      showHud: false,
     })
     expect(kept.paused).toBe(true)
     expect(kept.autoAttachActiveTab).toBe(false)
@@ -67,6 +68,8 @@ describe('parseSettings', () => {
     expect(kept.headed).toBe(false)
     expect(kept.logNativeHost).toBe(false)
     expect(kept.showBadge).toBe(false)
+    expect(kept.showHud).toBe(false)
+    expect(DEFAULT_SETTINGS.showHud).toBe(true)
 
     const rejected = parseSettings({
       paused: 'true',
@@ -76,6 +79,7 @@ describe('parseSettings', () => {
       headed: [],
       logNativeHost: 'yes',
       showBadge: 1,
+      showHud: 'on',
     })
     expect(rejected.paused).toBe(DEFAULT_SETTINGS.paused)
     expect(rejected.autoAttachActiveTab).toBe(DEFAULT_SETTINGS.autoAttachActiveTab)
@@ -84,6 +88,7 @@ describe('parseSettings', () => {
     expect(rejected.headed).toBe(DEFAULT_SETTINGS.headed)
     expect(rejected.logNativeHost).toBe(DEFAULT_SETTINGS.logNativeHost)
     expect(rejected.showBadge).toBe(DEFAULT_SETTINGS.showBadge)
+    expect(rejected.showHud).toBe(DEFAULT_SETTINGS.showHud)
   })
 
   it('keeps strings and rejects every non-string value', () => {

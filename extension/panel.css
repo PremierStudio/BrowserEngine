@@ -1,7 +1,7 @@
 /* ==========================================================================
    BrowserEngine — cockpit panel (side panel + tab fallback)
-   Builds on the ui.css tokens/components. Fluid from ~320px to full-tab
-   width, dark/light via tokens only.
+   Loaded after ui.css. Layout + panel chrome only: every colour, space and
+   type value comes from the shared tokens. Hairlines, no glows.
    ========================================================================== */
 
 /* Keep `hidden` authoritative over component display rules (.btn, .pill…). */
@@ -23,11 +23,15 @@
   position: sticky;
   top: 0;
   z-index: 20;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .cockpit-top {
   gap: var(--s-2);
   padding: var(--s-2) var(--s-3);
+  background: transparent;
+  border-bottom: 0;
 }
 
 .cockpit-top .brand {
@@ -36,8 +40,8 @@
 }
 
 .cockpit-top .mark {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--r-sm);
 }
 
@@ -52,14 +56,14 @@
 }
 
 .cockpit-actions .btn {
-  padding: 6px 10px;
+  padding: 5px 10px;
 }
 
 .cockpit-actions .btn.icon {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .status-rail {
@@ -68,20 +72,20 @@
   flex-wrap: wrap;
   gap: var(--s-1) var(--s-2);
   padding: var(--s-2) var(--s-3);
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(8px);
 }
 
 .status-pill {
-  gap: 5px;
-  background: color-mix(in srgb, var(--panel-2) 70%, transparent);
+  gap: 6px;
+  background: transparent;
 }
 
 .status-key {
   color: var(--faint);
-  font-size: 10px;
-  letter-spacing: 0.07em;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -94,8 +98,16 @@
   white-space: nowrap;
 }
 
-.status-rail .btn {
+/* Detach stays discoverable — a ghost button, never floating text. */
+.status-rail #detach {
   margin-left: auto;
+  border-color: var(--line);
+}
+
+.status-rail #detach:hover:not(:disabled) {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+  color: var(--text);
 }
 
 /* Body ------------------------------------------------------------------- */
@@ -113,7 +125,7 @@
 .pending-body {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--s-4);
 }
 
 .pending-target {
@@ -141,30 +153,6 @@
 
 .pending-actions .btn {
   flex: 1;
-  padding: 10px 12px;
-  font-size: var(--fs-md);
-}
-
-/* Breathe softly while an approval waits. */
-@keyframes pending-breathe {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 0%, transparent);
-  }
-
-  50% {
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--warn) 14%, transparent);
-  }
-}
-
-.card.pending {
-  animation: pending-breathe 2.6s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .card.pending {
-    animation: none;
-  }
 }
 
 /* Tabs ------------------------------------------------------------------- */
@@ -175,17 +163,10 @@
   min-width: 0;
 }
 
+/* Rows sit flush under the search / new-tab inputs they belong to. */
 .tab-list .row {
   gap: var(--s-2);
-  padding: var(--s-2);
-}
-
-.tab-list .row.active {
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-
-.tab-list .empty {
-  margin: var(--s-1);
+  padding: var(--s-2) 0;
 }
 
 .row.browser .tab-title {
@@ -208,6 +189,10 @@
   max-height: 240px;
 }
 
+.activity > div {
+  padding: 3px 0;
+}
+
 /* Footer ----------------------------------------------------------------- */
 
 .cockpit-foot {
@@ -216,10 +201,12 @@
 
 .cockpit-foot .toast {
   display: block;
-  padding: var(--s-2) var(--s-3);
+  padding: var(--s-2) 0 0;
+  border: 0;
+  background: transparent;
   color: var(--faint);
   font-size: var(--fs-xs);
-  line-height: 1.9;
+  line-height: 2;
   text-align: center;
 }
 

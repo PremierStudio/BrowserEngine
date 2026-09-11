@@ -25,6 +25,7 @@ const config: StrykerConfig = {
     '!src/extension/panel.ts',
     '!src/extension/options.ts',
     '!src/extension/nativeHost.ts',
+    '!src/extension/hudOverlay.ts',
   ],
   // perTest + no concurrency cap + ignoreStatic follow the
   // 40-minutes-to-40-seconds methodology: only covering tests run,

@@ -27,6 +27,7 @@ export type EngineSettings = {
   debuggerVersion: string
   logNativeHost: boolean
   showBadge: boolean
+  showHud: boolean
   defaultViewportWidth: number
   defaultViewportHeight: number
 }
@@ -50,6 +51,7 @@ export const DEFAULT_SETTINGS: EngineSettings = {
   debuggerVersion: '1.3',
   logNativeHost: true,
   showBadge: true,
+  showHud: true,
   defaultViewportWidth: 1280,
   defaultViewportHeight: 800,
 }
@@ -118,6 +120,13 @@ export const SETTINGS_FIELDS: readonly SettingsField[] = [
     group: 'Session',
     label: 'Headed',
     help: 'Prefer a visible window when the engine launches Chrome itself.',
+    kind: 'boolean',
+  },
+  {
+    key: 'showHud',
+    group: 'Session',
+    label: 'Control HUD',
+    help: 'Outline the controlled tab and draw the action cursor in the page.',
     kind: 'boolean',
   },
   {
@@ -309,6 +318,7 @@ export function parseSettings(raw: unknown): EngineSettings {
     debuggerVersion: asString(raw.debuggerVersion, DEFAULT_SETTINGS.debuggerVersion),
     logNativeHost: asBoolean(raw.logNativeHost, DEFAULT_SETTINGS.logNativeHost),
     showBadge: asBoolean(raw.showBadge, DEFAULT_SETTINGS.showBadge),
+    showHud: asBoolean(raw.showHud, DEFAULT_SETTINGS.showHud),
     defaultViewportWidth: asNumber(
       raw.defaultViewportWidth,
       DEFAULT_SETTINGS.defaultViewportWidth,

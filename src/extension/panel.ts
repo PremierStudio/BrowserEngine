@@ -210,7 +210,7 @@ function render(payload: CommandPayload): void {
       void command('attach', { tabId: tab.id }).then(render)
     })
     const focus = document.createElement('button')
-    focus.className = 'btn tiny'
+    focus.className = 'btn tiny ghost'
     focus.type = 'button'
     focus.textContent = 'Focus'
     focus.addEventListener('click', () => {

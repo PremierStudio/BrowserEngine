@@ -64,7 +64,7 @@ That is what this repo is for: author with an agent, keep a file, replay without
 
 Pace, type delay, expect timeout, and the work-area snap are all env-configurable. See [usage](docs/usage.md).
 
-**Extension** mode skips the second browser entirely: an unpacked MV3 extension drives your signed-in browser profile over a native-messaging bridge, with a side-panel cockpit, origin allow-list, and a kill switch. Build it with `npm run build:extension`, then follow [`extension/README.md`](extension/README.md).
+**Extension** mode skips the second browser entirely: an unpacked MV3 extension drives your signed-in browser profile over a native-messaging bridge, with a side-panel cockpit, origin allow-list, and a kill switch. While it drives, the controlled tab is grouped and badged and the page shows a control frame with the agent's cursor. Build it with `npm run build:extension`, then follow [`extension/README.md`](extension/README.md).
 
 ---
 

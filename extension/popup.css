@@ -27,26 +27,46 @@
   gap: var(--s-3);
 }
 
-.popup .stats {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.status-line {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
 }
 
-.popup .stat {
-  padding: var(--s-2) var(--s-3);
-}
-
-.popup .stat b {
+/* One compact rail: Host / Engine / Attach as inline dot+label+value. */
+.status-row {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--panel);
+}
+
+.status-item {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  font-size: var(--fs-md);
-  line-height: 1.35;
 }
 
-.popup .stat b > span:last-child {
+.status-label {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.status-value {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* Pause/Resume and Settings split the row evenly. */

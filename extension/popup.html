@@ -14,7 +14,6 @@
           <div class="mark" aria-hidden="true">BE</div>
           <div class="brand-copy">
             <strong>BROWSERENGINE</strong>
-            <span id="line" role="status" aria-live="polite">Checking…</span>
           </div>
         </div>
         <span class="pill" id="statePill">
@@ -23,36 +22,29 @@
         </span>
       </header>
       <main class="content">
-        <section class="stats" aria-label="Connection status">
-          <div class="stat">
-            <span>Host</span>
-            <b>
-              <span class="dot" id="hostDot" aria-hidden="true"></span>
-              <span id="host">…</span>
-            </b>
-          </div>
-          <div class="stat">
-            <span>Engine</span>
-            <b>
-              <span class="dot" id="engineDot" aria-hidden="true"></span>
-              <span id="engine">…</span>
-            </b>
-          </div>
-          <div class="stat">
-            <span>Attach</span>
-            <b>
-              <span class="dot" id="attachDot" aria-hidden="true"></span>
-              <span id="attach">…</span>
-            </b>
-          </div>
-        </section>
-        <div class="stack">
-          <button class="btn primary block" id="open" type="button">Open cockpit</button>
-          <div class="actions">
-            <button class="btn danger" id="kill" type="button">Pause</button>
-            <button class="btn" id="resume" type="button" hidden>Resume</button>
-            <button class="btn ghost" id="options" type="button">Settings</button>
-          </div>
+        <p class="status-line" id="line" role="status" aria-live="polite">Checking…</p>
+        <button class="btn primary block" id="open" type="button">Open cockpit</button>
+        <div class="actions">
+          <button class="btn danger" id="kill" type="button" aria-pressed="false">Pause</button>
+          <button class="btn" id="resume" type="button" aria-pressed="false" hidden>Resume</button>
+          <button class="btn" id="options" type="button">Settings</button>
+        </div>
+        <div class="status-row" aria-label="Connection status">
+          <span class="status-item">
+            <span class="dot" id="hostDot" aria-hidden="true"></span>
+            <span class="status-label">Host</span>
+            <span class="status-value" id="host">…</span>
+          </span>
+          <span class="status-item">
+            <span class="dot" id="engineDot" aria-hidden="true"></span>
+            <span class="status-label">Engine</span>
+            <span class="status-value" id="engine">…</span>
+          </span>
+          <span class="status-item">
+            <span class="dot" id="attachDot" aria-hidden="true"></span>
+            <span class="status-label">Attach</span>
+            <span class="status-value" id="attach">…</span>
+          </span>
         </div>
         <p class="hint">
           <span class="kbd">Ctrl+Shift+E</span><span>cockpit</span>

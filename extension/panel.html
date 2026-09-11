@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
     <title>BrowserEngine cockpit</title>
     <link rel="stylesheet" href="ui.css" />
     <link rel="stylesheet" href="panel.css" />
@@ -15,7 +16,7 @@
             <div class="mark" aria-hidden="true">BE</div>
             <div class="brand-copy">
               <strong>BROWSERENGINE</strong>
-              <span id="subtitle">Cockpit</span>
+              <span id="subtitle" role="status" aria-live="polite">Cockpit</span>
             </div>
           </div>
           <div class="actions cockpit-actions">
@@ -63,7 +64,10 @@
         <section class="card pending" id="pendingCard" hidden aria-labelledby="pendingTitle">
           <div class="card-head">
             <h2 id="pendingTitle">Attach request</h2>
-            <span class="pill warn">Needs approval</span>
+            <span class="pill">
+              <span class="dot warn" aria-hidden="true"></span>
+              Needs approval
+            </span>
           </div>
           <div class="card-body pending-body">
             <div class="pending-target">
@@ -72,7 +76,7 @@
             </div>
             <div class="actions pending-actions">
               <button class="btn primary" id="allow" type="button">Allow origin</button>
-              <button class="btn danger" id="deny" type="button">Deny</button>
+              <button class="btn ghost" id="deny" type="button">Deny</button>
             </div>
           </div>
         </section>
@@ -81,7 +85,7 @@
             <h2 id="tabsTitle">Tabs</h2>
             <span class="count" id="tabCount" title="Visible tabs">0</span>
           </div>
-          <div class="card-body tight stack">
+          <div class="card-body stack">
             <div class="search">
               <input
                 class="input"
@@ -132,7 +136,7 @@
           <div class="card-head">
             <h2 id="activityTitle">Activity</h2>
           </div>
-          <div class="card-body tight">
+          <div class="card-body">
             <div class="activity" id="activity"></div>
           </div>
         </section>

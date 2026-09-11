@@ -16,6 +16,9 @@ const config: KnipConfiguration = {
     'src/extension/panel.ts',
     'src/extension/options.ts',
     'src/extension/nativeHost.ts',
+    // Injected page script: compiled to extension/hudOverlay.js and evaluated
+    // into the controlled tab over CDP, so nothing imports it at build time.
+    'src/extension/hudOverlay.ts',
     'src/extension/nativeFraming.ts',
     'src/extension/session.ts',
     'src/extension/nativePort.ts',

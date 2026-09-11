@@ -13,7 +13,7 @@ html {
 }
 
 /* --------------------------------------------------------------------------
-   Sticky top bar
+   Sticky top bar: brand, page title, status
    -------------------------------------------------------------------------- */
 
 .options-top {
@@ -21,7 +21,32 @@ html {
   top: 0;
   z-index: 30;
   min-height: var(--options-top-h);
+  gap: var(--s-4);
   background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.options-top-lead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.options-top-lead h1 {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.options-top-sep {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  background: var(--line);
 }
 
 .options-status {
@@ -159,6 +184,64 @@ html {
 }
 
 /* --------------------------------------------------------------------------
+   Advanced: one collapsed disclosure holding the secondary groups
+   -------------------------------------------------------------------------- */
+
+.options-advanced {
+  scroll-margin-top: var(--options-anchor);
+}
+
+.options-advanced > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--panel);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  transition:
+    background var(--speed),
+    border-color var(--speed);
+}
+
+.options-advanced > summary:hover {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+}
+
+.options-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.options-advanced > summary::before {
+  content: '';
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform var(--speed);
+}
+
+.options-advanced[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.options-advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding-top: var(--s-4);
+}
+
+/* --------------------------------------------------------------------------
    Sticky save bar
    -------------------------------------------------------------------------- */
 
@@ -236,5 +319,9 @@ html {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .options-advanced > summary::before {
+    transition: none;
   }
 }

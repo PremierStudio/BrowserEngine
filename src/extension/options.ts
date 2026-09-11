@@ -22,6 +22,7 @@ type CommandMessage = {
 type FormControl =
   | { kind: 'boolean' | 'number' | 'string'; input: HTMLInputElement }
   | { kind: 'enum'; select: HTMLSelectElement }
+  | { kind: 'segmented'; root: HTMLElement; value: string }
   | { kind: 'origins'; area: HTMLTextAreaElement }
 
 type FieldGroup = {
@@ -39,6 +40,15 @@ const GROUP_BLURBS = new Map<string, string>([
   ['Window', 'Headed window geometry, viewport defaults, and the CDP endpoint.'],
   ['Host', 'Native host logging and the toolbar badge.'],
 ])
+
+/** Groups with a first-class sidebar link. Everything else lives under Advanced. */
+const PRIMARY_GROUPS: readonly string[] = ['Safety', 'Session']
+
+/** Sidebar label that fronts every non-primary group. */
+const ADVANCED_NAV = 'Advanced'
+
+/** Small enums read better as a segmented control than a select. */
+const SEGMENTED_KEYS: ReadonlySet<string> = new Set(['attachPolicy', 'observeDetail'])
 
 const NARROW_VIEWPORT = window.matchMedia('(max-width: 760px)')
 
@@ -108,6 +118,38 @@ function groupedFields(): FieldGroup[] {
   return groups
 }
 
+/** A segmented enum: one button per value, exactly one active at a time. */
+function segmentedControl(values: readonly string[], value: unknown): FormControl {
+  const root = document.createElement('div')
+  const control: FormControl = {
+    kind: 'segmented',
+    root,
+    value: typeof value === 'string' && values.includes(value) ? value : (values[0] ?? ''),
+  }
+  const buttons: HTMLButtonElement[] = []
+  for (const item of values) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = item
+    const active = item === control.value
+    button.classList.toggle('active', active)
+    button.setAttribute('aria-pressed', String(active))
+    button.addEventListener('click', () => {
+      if (control.kind === 'segmented') {
+        control.value = item
+      }
+      for (const other of buttons) {
+        const on = other === button
+        other.classList.toggle('active', on)
+        other.setAttribute('aria-pressed', String(on))
+      }
+    })
+    buttons.push(button)
+    root.append(button)
+  }
+  return control
+}
+
 function controlFor(field: SettingsField, value: unknown): FormControl {
   if (field.kind === 'boolean') {
     const input = document.createElement('input')
@@ -116,8 +158,12 @@ function controlFor(field: SettingsField, value: unknown): FormControl {
     return { kind: 'boolean', input }
   }
   if (field.kind === 'enum') {
+    const values = field.values ?? []
+    if (SEGMENTED_KEYS.has(field.key)) {
+      return segmentedControl(values, value)
+    }
     const select = document.createElement('select')
-    for (const item of field.values ?? []) {
+    for (const item of values) {
       const option = document.createElement('option')
       option.value = item
       option.textContent = item
@@ -148,11 +194,12 @@ function controlFor(field: SettingsField, value: unknown): FormControl {
   return { kind: 'string', input }
 }
 
-function controlElement(
-  control: FormControl,
-): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement {
+function controlElement(control: FormControl): HTMLElement {
   if (control.kind === 'enum') {
     return control.select
+  }
+  if (control.kind === 'segmented') {
+    return control.root
   }
   if (control.kind === 'origins') {
     return control.area
@@ -172,6 +219,9 @@ function readControl(control: FormControl): boolean | number | string | string[]
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line !== '')
+  }
+  if (control.kind === 'segmented') {
+    return control.value
   }
   if (control.kind === 'enum') {
     return control.select.value
@@ -194,7 +244,11 @@ const status = elementById('status')
 const nav = elementById('nav')
 const controls = new Map<keyof EngineSettings, FormControl>()
 const sections = new Map<string, HTMLElement>()
+/** DOM-ordered scroll anchors: primary cards, the disclosure, then its cards. */
+const boundaries: Array<[string, HTMLElement]> = []
 const navItems: HTMLButtonElement[] = []
+let advancedDetails: HTMLDetailsElement | undefined
+let advancedOpen = false
 
 function setStatus(message: string, tone: StatusTone): void {
   status.textContent = message
@@ -209,17 +263,29 @@ function activeOffset(): number {
 /** Group whose section top has most recently passed the sticky header stack. */
 function sectionAtViewportTop(): string | undefined {
   let active: string | undefined
-  for (const [name, section] of sections) {
-    if (section.getBoundingClientRect().top <= activeOffset()) {
+  for (const [name, element] of boundaries) {
+    if (element.getClientRects().length === 0) {
+      continue
+    }
+    if (element.getBoundingClientRect().top <= activeOffset()) {
       active = name
     }
   }
   return active
 }
 
+/** Sidebar item that fronts a group: primaries stand alone, the rest fold into Advanced. */
+function navKey(name: string | undefined): string | undefined {
+  if (name === undefined) {
+    return undefined
+  }
+  return PRIMARY_GROUPS.includes(name) ? name : ADVANCED_NAV
+}
+
 function setActiveGroup(name: string | undefined): void {
+  const key = navKey(name)
   for (const item of navItems) {
-    item.classList.toggle('active', item.dataset.group === name)
+    item.classList.toggle('active', item.dataset.group === key)
   }
 }
 
@@ -231,28 +297,48 @@ window.addEventListener(
   { passive: true },
 )
 
-function paintNav(groups: readonly FieldGroup[]): void {
+function scrollToGroup(name: string): void {
+  setActiveGroup(name)
+  const section = sections.get(name)
+  if (section !== undefined) {
+    section.scrollIntoView({ block: 'start' })
+  }
+}
+
+function openAdvanced(): void {
+  setActiveGroup(ADVANCED_NAV)
+  const details = advancedDetails
+  if (details === undefined) {
+    return
+  }
+  advancedOpen = true
+  details.open = true
+  details.scrollIntoView({ block: 'start' })
+}
+
+function navButton(label: string, onClick: () => void): HTMLButtonElement {
+  const item = document.createElement('button')
+  item.type = 'button'
+  item.className = 'tab options-nav-item'
+  item.dataset.group = label
+  item.textContent = label
+  item.addEventListener('click', onClick)
+  navItems.push(item)
+  return item
+}
+
+function paintNav(primary: readonly FieldGroup[], advanced: readonly FieldGroup[]): void {
   nav.replaceChildren()
   navItems.length = 0
   const title = document.createElement('p')
   title.className = 'options-nav-title'
   title.textContent = 'On this page'
   nav.append(title)
-  for (const group of groups) {
-    const item = document.createElement('button')
-    item.type = 'button'
-    item.className = 'tab options-nav-item'
-    item.dataset.group = group.name
-    item.textContent = group.name
-    item.addEventListener('click', () => {
-      setActiveGroup(group.name)
-      const section = sections.get(group.name)
-      if (section !== undefined) {
-        section.scrollIntoView({ block: 'start' })
-      }
-    })
-    navItems.push(item)
-    nav.append(item)
+  for (const group of primary) {
+    nav.append(navButton(group.name, () => scrollToGroup(group.name)))
+  }
+  if (advanced.length > 0) {
+    nav.append(navButton(ADVANCED_NAV, openAdvanced))
   }
 }
 
@@ -263,6 +349,10 @@ function styleControl(field: SettingsField, control: FormControl): HTMLElement {
   element.dataset.key = field.key
   if (control.kind === 'enum') {
     element.className = 'select'
+  } else if (control.kind === 'segmented') {
+    element.className = 'segmented'
+    element.setAttribute('role', 'group')
+    element.setAttribute('aria-label', field.label)
   } else if (control.kind === 'origins') {
     element.className = 'textarea'
   } else if (control.kind !== 'boolean') {
@@ -303,9 +393,11 @@ function fieldNode(
   } else {
     const head = document.createElement('div')
     head.className = 'options-field-head'
-    const label = document.createElement('label')
+    const label = document.createElement(control.kind === 'segmented' ? 'span' : 'label')
     label.className = 'field-label'
-    label.htmlFor = element.id
+    if (label instanceof HTMLLabelElement) {
+      label.htmlFor = element.id
+    }
     label.textContent = field.label
     head.append(label, hint)
     wrap.append(head, element)
@@ -317,49 +409,86 @@ function fieldNode(
   return { node: wrap, control }
 }
 
+function sectionId(name: string): string {
+  return `options-group-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+}
+
+/** One card: head with group name + field count, blurb, then the field grid. */
+function buildSection(group: FieldGroup, values: Record<string, unknown>): HTMLElement {
+  const section = document.createElement('section')
+  section.className = 'card options-group'
+  section.id = sectionId(group.name)
+  const head = document.createElement('div')
+  head.className = 'card-head'
+  const title = document.createElement('h3')
+  title.textContent = group.name
+  const count = document.createElement('span')
+  count.className = 'count'
+  count.textContent = `${String(group.fields.length)} fields`
+  head.append(title, count)
+  const body = document.createElement('div')
+  body.className = 'card-body'
+  const blurb = GROUP_BLURBS.get(group.name)
+  if (blurb !== undefined) {
+    const description = document.createElement('p')
+    description.className = 'options-group-desc'
+    description.textContent = blurb
+    body.append(description)
+  }
+  const grid = document.createElement('div')
+  grid.className = 'options-fields'
+  for (const field of group.fields) {
+    const { node, control } = fieldNode(field, values[field.key])
+    controls.set(field.key, control)
+    grid.append(node)
+  }
+  body.append(grid)
+  section.append(head, body)
+  sections.set(group.name, section)
+  boundaries.push([group.name, section])
+  return section
+}
+
 function paint(settings: unknown): void {
   const previous = sectionAtViewportTop()
   form.replaceChildren()
   controls.clear()
   sections.clear()
+  boundaries.length = 0
   const values = settingsValues(settings)
   const groups = groupedFields()
-  for (const [index, group] of groups.entries()) {
-    const section = document.createElement('section')
-    section.className = 'card options-group'
-    section.id = `options-group-${String(index)}`
-    const head = document.createElement('div')
-    head.className = 'card-head'
-    const title = document.createElement('h3')
-    title.textContent = group.name
-    const count = document.createElement('span')
-    count.className = 'count'
-    count.textContent = `${String(group.fields.length)} fields`
-    head.append(title, count)
-    const body = document.createElement('div')
-    body.className = 'card-body'
-    const blurb = GROUP_BLURBS.get(group.name)
-    if (blurb !== undefined) {
-      const description = document.createElement('p')
-      description.className = 'options-group-desc'
-      description.textContent = blurb
-      body.append(description)
-    }
-    const grid = document.createElement('div')
-    grid.className = 'options-fields'
-    for (const field of group.fields) {
-      const { node, control } = fieldNode(field, values[field.key])
-      controls.set(field.key, control)
-      grid.append(node)
-    }
-    body.append(grid)
-    section.append(head, body)
-    sections.set(group.name, section)
-    form.append(section)
+  const primary = groups.filter((group) => PRIMARY_GROUPS.includes(group.name))
+  const advanced = groups.filter((group) => PRIMARY_GROUPS.includes(group.name) === false)
+  for (const group of primary) {
+    form.append(buildSection(group, values))
   }
-  paintNav(groups)
+  advancedDetails = undefined
+  if (advanced.length > 0) {
+    const details = document.createElement('details')
+    details.className = 'options-advanced'
+    details.open = advancedOpen
+    const summary = document.createElement('summary')
+    summary.textContent = 'Advanced engine settings'
+    const body = document.createElement('div')
+    body.className = 'options-advanced-body'
+    boundaries.push([ADVANCED_NAV, details])
+    for (const group of advanced) {
+      body.append(buildSection(group, values))
+    }
+    details.append(summary, body)
+    details.addEventListener('toggle', () => {
+      advancedOpen = details.open
+    })
+    advancedDetails = details
+    form.append(details)
+  }
+  paintNav(primary, advanced)
   const first = groups[0]
-  setActiveGroup(previous !== undefined && sections.has(previous) ? previous : first?.name)
+  const restored =
+    previous !== undefined && (sections.has(previous) || previous === ADVANCED_NAV)
+      ? previous
+      : first?.name
+  setActiveGroup(restored)
 }
 
 function collect(): Record<string, unknown> {
