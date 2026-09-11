@@ -1,20 +1,10 @@
 # Install as an MCP server
 
-`@premierstudio/browser-agent` is published to the Premier Studio npm registry on
-Forgejo by CI. Push a `v*` tag whose version matches `package.json` and the
-[package](https://git.taild1bbf.ts.net/PremierStudio/BrowserAgent/packages) and
-[release](https://git.taild1bbf.ts.net/PremierStudio/BrowserAgent/releases)
-appear on Forgejo automatically.
-
-## One-time setup
-
-Create a Forgejo access token with `read:package` scope
-(Settings → Applications → Generate New Token), then point npm at the registry:
-
-```bash
-npm config set @premierstudio:registry https://git.taild1bbf.ts.net/api/packages/PremierStudio/npm/
-npm config set //git.taild1bbf.ts.net/api/packages/PremierStudio/npm/:_authToken "$FORGEJO_TOKEN"
-```
+`@premierstudio/browser-agent` is published to
+[npm](https://www.npmjs.com/package/@premierstudio/browser-agent) by CI. Push a
+`v*` tag whose version matches `package.json` and the package is published and a
+[release](https://github.com/PremierStudio/BrowserEngine/releases) is created
+automatically.
 
 ## Install
 
