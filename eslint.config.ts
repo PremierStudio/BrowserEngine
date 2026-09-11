@@ -26,7 +26,16 @@ const noForEach: Rule.RuleModule = {
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/', 'coverage/', 'reports/', '.stryker-tmp/', 'dist/', 'dist-scripts/'],
+    ignores: [
+      'node_modules/',
+      'coverage/',
+      'reports/',
+      '.stryker-tmp/',
+      'dist/',
+      'dist-scripts/',
+      'extension/*.js',
+      'extension/native/*.js',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

@@ -6,7 +6,23 @@ import type { KnipConfiguration } from 'knip'
 // then parses it and derives `@stryker-mutator/vitest-runner` from
 // `testRunner: 'vitest'` (instead of flagging it as an unused dependency).
 const config: KnipConfiguration = {
-  entry: ['scripts/*.ts', 'src/cli.ts', 'vitest.stryker.config.ts'],
+  entry: [
+    'scripts/*.ts',
+    'src/cli.ts',
+    // Browser/native entry points that the TS extension build emits as the
+    // unpacked extension's runtime files (see tsconfig.extension.json).
+    'src/extension/background.ts',
+    'src/extension/popup.ts',
+    'src/extension/panel.ts',
+    'src/extension/options.ts',
+    'src/extension/nativeHost.ts',
+    'src/extension/nativeFraming.ts',
+    'src/extension/session.ts',
+    'src/extension/nativePort.ts',
+    'src/extension/cockpit.ts',
+    'src/testing/clickGoMain.ts',
+    'vitest.stryker.config.ts',
+  ],
   stryker: { config: ['stryker.config.ts'] },
 }
 

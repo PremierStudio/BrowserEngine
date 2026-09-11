@@ -116,6 +116,10 @@ describe('saveFlow', () => {
   })
 
   it('refuses type, hover, scroll, and select without a name', () => {
+    expect(saveFlow({ name: 'bad', steps: [{ action: 'type', name: '', text: 'x' }] })).toEqual({
+      ok: false,
+      error: 'action type requires name',
+    })
     expect(saveFlow({ name: 'bad', steps: [{ action: 'type', text: 'x' }] })).toEqual({
       ok: false,
       error: 'action type requires name',

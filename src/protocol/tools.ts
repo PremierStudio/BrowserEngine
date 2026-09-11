@@ -19,6 +19,7 @@ export interface ToolCaller {
 export interface RegisterToolsOptions {
   clock?: () => number
   traces?: CallLog
+  afterCall?: () => void
 }
 
 /**
@@ -111,13 +112,11 @@ export function registerTools(
       async (args) => {
         const started = clock()
         const result = await handler.call(tool.name, args)
+        if (options.afterCall !== undefined) {
+          options.afterCall()
+        }
         return finalizeToolResult(tool.name, result, started, clock, options.traces)
       },
     )
   }
-}
-
-/** Creates an MCP server with the given implementation info. */
-export function initServer(name: string, version: string): McpServer {
-  return new McpServer({ name, version })
 }

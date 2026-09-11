@@ -52,6 +52,22 @@ export class TaskRunner {
     }
   }
 
+  /** Create a task, return the function value, and rethrow so MCP still fails. */
+  async track<T>(name: string, fn: () => Promise<T>): Promise<T> {
+    const task = this.store.create(name)
+    try {
+      const result = await fn()
+      this.store.update(task.id, { status: 'completed', result })
+      return result
+    } catch (error) {
+      this.store.update(task.id, {
+        status: 'failed',
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  }
+
   /**
    * Pure decision for the blocking wait: returns the task when it has reached
    * a terminal state, 'timeout' when the deadline has passed, or 'waiting'.

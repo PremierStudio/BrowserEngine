@@ -98,7 +98,7 @@ function durableError(step: FlowStep): string | undefined {
   if (step.action === 'check' && step.expectUrl === undefined && step.expectText === undefined) {
     return 'action check requires expectUrl or expectText'
   }
-  if (BINDABLE.has(step.action) && step.name === undefined) {
+  if (BINDABLE.has(step.action) && (step.name === undefined || trimmed(step.name) === '')) {
     return `action ${step.action} requires name`
   }
   if (

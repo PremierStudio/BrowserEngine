@@ -83,13 +83,13 @@ amendments take precedence over the corresponding lines of `mvp.md`.
       `{ 'ts-ignore': true, 'ts-nocheck': true, 'ts-expect-error': true,
 'ts-check': true }`.
     - No canonical rule bans `.forEach`; a tiny custom ESLint rule in
-      `eslint.config.mjs` walks `CallExpression.callee.property === 'forEach'`.
+      `eslint.config.ts` walks `CallExpression.callee.property === 'forEach'`.
 19. **Coverage gate**: `@vitest/coverage-v8`, thresholds 100 across
     lines/functions/branches/statements on `src/`, fail below threshold.
 20. **Mutation gate**: stryker `thresholds: { high: 100, low: 100, break: 100 }`
     (exit 1 below `break`). Vitest runner, `mutate: ['src/**/*.ts', '!src/cli.ts']`
     (`src/cli.ts` is the process entry; it only wires live Puppeteer and is
-    covered by `tests/cli.test.ts`, not by mutant-killing unit tests). Speed
+    covered by `tests/protocol/cli.test.ts`, not by mutant-killing unit tests). Speed
     follows https://stryker-mutator.io/blog/stryker4s-40-minutes-to-40-seconds/ :
     in-process Vitest runner, `coverageAnalysis: 'perTest'`, no concurrency
     cap (all cores), `ignoreStatic: true` (static mutants force a full reload
@@ -97,15 +97,15 @@ amendments take precedence over the corresponding lines of `mvp.md`.
     `reports/stryker-incremental.json`. CI restores/saves that file via
     `actions/cache@v4` keyed by OS + SHA with an OS-wide restore-key.
     Windows: forward-slash globs only, gitignore `.stryker-tmp`, set
-    `timeoutMS: 30000`, and CI kills orphan Chrome between runs
-    (`taskkill /F /IM chrome.exe`) — a stuck mutant spawns headless Chrome.
+    `timeoutMS: 30000`. This repo's GitHub Actions job is Ubuntu and does not
+    run a live Chrome `run` of a public site.
 21. **JUnit reporter is built into vitest 4** (`reporters: ['junit']`,
     `outputFile: { junit: 'reports/junit.xml' }`) — no extra package.
 22. **knip on Windows**: if the oxc raw-transfer hangs, set
     `KNIP_DISABLE_RAW_TRANSFER=1`; quote globs in pwsh.
 23. **Survivor registry**: `mvp.md` allows "documented justified survivors" but
     allows no mechanism to enforce them in CI. M0 introduces
-    `scripts/survivors.mjs` + `mutation-survivors.json` — every permitted
+    `scripts/survivors.ts` + `mutation-survivors.json` — every permitted
     survivor is a named entry; CI fails on any survivor not in the registry.
     This is the ONLY escape from the mutation gate (per mvp.md lines 92–96) —
     the registry replaces the empty "document it" clause with a checked gate.
@@ -131,4 +131,5 @@ amendments take precedence over the corresponding lines of `mvp.md`.
 26. Subagents may NOT merge anything not red→green, mutation-clean, and
     tooling-clean (typecheck/knip/lint/format). Orchestrator enforces on merge.
 27. No core product code before M0 is proven green (hard gate from mvp.md).
-    "Core product code" = anything under `src/` beyond the M0 smoke module.
+    "Core product code" was anything under `src/` beyond the M0 smoke module.
+    That smoke module is gone; the gate is the current `src/` tree.

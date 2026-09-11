@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildIntentTools, diffExplainTarget, noWatchEvents } from '../../src/intent/intentTools.js'
+import { buildIntentTools, diffExplainTarget } from '../../src/intent/intentTools.js'
+import { TaskRunner } from '../../src/tasks/TaskRunner.js'
+import { TaskStore } from '../../src/tasks/TaskStore.js'
 import type { ContextPage } from '../../src/context/ContextPage.js'
 import type { SnapshotNode } from '../../src/snapshot/a11ySnapshot.js'
 
@@ -35,13 +37,6 @@ function recordPage(): ContextPage {
 function handlerFor(name: string) {
   return buildIntentTools().find((tool) => tool.name === name)?.handler
 }
-
-describe('noWatchEvents', () => {
-  it('returns an empty event list', () => {
-    expect(noWatchEvents()).toEqual([])
-    expect(noWatchEvents()).not.toEqual(['Stryker was here'])
-  })
-})
 
 describe('diffExplainTarget', () => {
   it('pins kind to the diff discriminant', () => {
@@ -137,6 +132,28 @@ describe('buildIntentTools', () => {
     expect(tools.run_flow?.inputSchema.safeParse({ steps: [{}] }).success).toBe(false)
   })
 
+  it('watch_until kind event matches events from the last observe', async () => {
+    const page = recordPage()
+    page.observe = async () => ({
+      snapshot: tree,
+      image: '',
+      overlay: {},
+      pageState: { url: '', title: '' },
+      events: [{ type: 'console', timestamp: 1, level: 'log', text: 'boom' }],
+    })
+    const matched = await handlerFor('watch_until')?.(
+      { kind: 'event', value: 'boom', timeout: 0 },
+      { experimental: false, page },
+    )
+    expect(matched).toEqual({ matched: true, reason: 'condition met' })
+    const quiet = recordPage()
+    const missed = await handlerFor('watch_until')?.(
+      { kind: 'event', value: 'boom', timeout: 0 },
+      { experimental: false, page: quiet },
+    )
+    expect(missed).toEqual({ matched: false, reason: 'timeout' })
+  })
+
   it('watch_until matches a uid on the current page', async () => {
     const result = await handlerFor('watch_until')?.(
       { kind: 'uid', value: 'btn-1', timeout: 1000 },
@@ -166,12 +183,81 @@ describe('buildIntentTools', () => {
     expect(refused).toEqual({
       ok: false,
       error: 'action click requires expectUrl or expectText',
+      index: 0,
     })
     const allowed = await handlerFor('compile_flow')?.(
       { steps: [{ action: 'click', name: 'Submit' }], requireExpect: false },
       ctx,
     )
     expect(allowed).toMatchObject({ ok: true, bound: 1 })
+  })
+
+  it('records run_flow on the task runner and still returns the result', async () => {
+    const previous = process.env.BROWSER_ENGINE_PACE_MS
+    process.env.BROWSER_ENGINE_PACE_MS = '0'
+    try {
+      const store = new TaskStore(() => 'task-1')
+      const runner = new TaskRunner(store)
+      const run = buildIntentTools({ runner }).find((tool) => tool.name === 'run_flow')?.handler
+      const result = await run?.(
+        { steps: [{ action: 'click', uid: 'btn-1' }] },
+        { experimental: false, page: recordPage() },
+      )
+      expect(result).toEqual({ ok: true, steps: 1 })
+      expect(store.list()).toEqual([
+        expect.objectContaining({ name: 'run_flow', status: 'completed', result }),
+      ])
+    } finally {
+      if (previous === undefined) {
+        delete process.env.BROWSER_ENGINE_PACE_MS
+      } else {
+        process.env.BROWSER_ENGINE_PACE_MS = previous
+      }
+    }
+  })
+
+  it('records watch_until and a failed run_flow', async () => {
+    const previousHeaded = process.env.BROWSER_ENGINE_HEADED
+    const previousExpect = process.env.BROWSER_ENGINE_EXPECT_MS
+    process.env.BROWSER_ENGINE_HEADED = '0'
+    process.env.BROWSER_ENGINE_EXPECT_MS = '0'
+    try {
+      let next = 0
+      const store = new TaskStore(() => {
+        next += 1
+        return `task-${String(next)}`
+      })
+      const runner = new TaskRunner(store)
+      const tools = Object.fromEntries(
+        buildIntentTools({ runner }).map((tool) => [tool.name, tool]),
+      )
+      const watched = await tools.watch_until?.handler(
+        { kind: 'uid', value: 'missing', timeout: 0 },
+        { experimental: false, page: recordPage() },
+      )
+      expect(watched).toEqual({ matched: false, reason: 'timeout' })
+      await expect(
+        tools.run_flow?.handler(
+          { steps: [{ action: 'explode' }] },
+          { experimental: false, page: recordPage() },
+        ),
+      ).rejects.toThrow(/unknown action/)
+      expect(store.list().map((task) => [task.name, task.status])).toEqual([
+        ['watch_until', 'completed'],
+        ['run_flow', 'failed'],
+      ])
+    } finally {
+      if (previousHeaded === undefined) {
+        delete process.env.BROWSER_ENGINE_HEADED
+      } else {
+        process.env.BROWSER_ENGINE_HEADED = previousHeaded
+      }
+      if (previousExpect === undefined) {
+        delete process.env.BROWSER_ENGINE_EXPECT_MS
+      } else {
+        process.env.BROWSER_ENGINE_EXPECT_MS = previousExpect
+      }
+    }
   })
 
   it('run_flow executes steps on the page', async () => {

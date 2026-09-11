@@ -17,7 +17,11 @@ import {
   WINDOWS_WORK_AREA_COMMAND,
   firstBrowserPage,
   headedRequested,
+  openPuppeteerBrowser,
   puppeteerLaunchOptions,
+  releaseBrowser,
+  resolveBrowserOpenMode,
+  sandboxChromeArgs,
   resolveWorkArea,
 } from './browser/launchOptions.js'
 import { adaptPageEventsFromUnknown, combineEventSources } from './browser/pageEvents.js'
@@ -34,6 +38,9 @@ import { buildCliMain, buildHttpHandler } from './protocol/cli.js'
 import { executeFlowCli, parseCliCommand } from './protocol/flowCli.js'
 import { writeOutputFile } from './protocol/writeOutputFile.js'
 import { isHttpArg, listenHttp } from './protocol/httpListen.js'
+import { listenExtensionSocket } from './extension/listen.js'
+import { createExtensionTabHost, openExtensionContextPage } from './extension/openSession.js'
+import { buildExtensionTools } from './extension/settingsTools.js'
 
 function probeWorkAreaCsv(): string | undefined {
   if (process.platform !== 'win32') {
@@ -89,10 +96,12 @@ const live: {
   currentContext: ContextPage | undefined
   recovering: ReturnType<typeof createRecoveringPage> | undefined
   managed: BrowserController | undefined
+  ext: ReturnType<typeof listenExtensionSocket> | undefined
 } = {
   currentContext: undefined,
   recovering: undefined,
   managed: undefined,
+  ext: undefined,
 }
 
 async function attachPage(raw: unknown): Promise<ContextPage> {
@@ -101,7 +110,7 @@ async function attachPage(raw: unknown): Promise<ContextPage> {
   const context = new PuppeteerContextPage(like, {
     mutations,
     sleep: defaultSleep,
-    typeCharMs: typeCharMs(process.env),
+    typeCharMs: typeCharMs(process.env, process.argv),
   })
   const bridge = createDomMutationBridge()
   await installMutationObserver(
@@ -130,8 +139,34 @@ async function attachPage(raw: unknown): Promise<ContextPage> {
 }
 
 async function openLiveSession(): Promise<ChromeSession> {
-  const browser = await puppeteer.launch(
-    puppeteerLaunchOptions(headed, resolveWorkArea(process.env, probeWorkAreaCsv())),
+  const mode = resolveBrowserOpenMode(process.env, process.argv)
+  if (mode.kind === 'extension') {
+    const ext = live.ext ?? listenExtensionSocket()
+    live.ext = ext
+    const context = await openExtensionContextPage(ext.bridge)
+    live.currentContext = context
+    live.recovering?.adopt(context)
+    return {
+      pid: undefined,
+      host: createExtensionTabHost(ext.bridge),
+      close: async () => {
+        await ext.bridge.request('detach')
+        live.currentContext = undefined
+        live.recovering?.reset()
+      },
+    }
+  }
+  const browser = await openPuppeteerBrowser(
+    mode,
+    puppeteerLaunchOptions(
+      headed,
+      resolveWorkArea(process.env, probeWorkAreaCsv()),
+      sandboxChromeArgs(process.env),
+    ),
+    {
+      launch: (opts) => puppeteer.launch(opts),
+      connect: (opts) => puppeteer.connect(opts),
+    },
   )
   const cache = createRawTabCache()
   const rawByWrapped = new Map<RawTabPage, unknown>()
@@ -166,12 +201,13 @@ async function openLiveSession(): Promise<ChromeSession> {
     host.setCurrentId(first.id)
   }
   const child = browser.process()
-  const chromePid = child === null || child === undefined ? undefined : child.pid
+  const chromePid =
+    mode.kind === 'attach' || child === null || child === undefined ? undefined : child.pid
   return {
     pid: chromePid,
     host,
     close: async () => {
-      await browser.close()
+      await releaseBrowser(mode, browser)
       live.currentContext = undefined
       live.recovering?.reset()
     },
@@ -209,10 +245,15 @@ process.on('exit', () => {
   desk.markClosed()
 })
 
+if (resolveBrowserOpenMode(process.env, process.argv).kind === 'extension') {
+  live.ext = listenExtensionSocket()
+}
+
 const options = {
   page: recovering,
   eventSource: deferredEvents.source,
   controller,
+  extraTools: live.ext === undefined ? undefined : buildExtensionTools(live.ext.bridge),
 }
 
 const command = parseCliCommand(process.argv)

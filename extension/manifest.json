@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "BrowserEngine",
+  "version": "0.3.0",
+  "description": "Drive this Brave profile from Grok / BrowserEngine. Cockpit, settings, origin allow-list.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnfeLb64ljausOi1k0Pc0tss2W2TJe2w2z/bF3TTAvQBNa0atPpTdQqXNpmsJPWjgkYKxMNaSvuKEhDOOkr/ssPomtONTuyONuFwpRiK5WzMvAb7CGqlvdnPSHNv9CqI2FtMAQApyabfvOcmUT2t1E5o/OLTf90OHEPVFnDU/YI3Uggzdxz3EA7CSnl3Vn+cIyPB5sIB8Pepo42zelk4xuDHbDI9Tz5k0AhdRpSLsQaqb6ItbcRqlOAjiyw8MYoGnpsBy7xh2DXNnXoPlcsbcFcYxtNhhVsHiLga1z79eJqKQDeCbMc7hiERNDX35yrTBUodLmTq39KvtLxevUmWeZwIDAQAB",
+  "permissions": [
+    "debugger",
+    "tabs",
+    "nativeMessaging",
+    "activeTab",
+    "storage",
+    "sidePanel",
+    "commands"
+  ],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "BrowserEngine",
+    "default_popup": "popup.html"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "commands": {
+    "open-cockpit": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E"
+      },
+      "description": "Open the BrowserEngine side-panel cockpit"
+    },
+    "kill-switch": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+U"
+      },
+      "description": "Pause BrowserEngine and detach the debugger"
+    }
+  }
+}

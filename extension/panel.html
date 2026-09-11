@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BrowserEngine</title>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <div class="brand">
+          <div class="mark">BE</div>
+          <div class="brand-copy">
+            <strong>BROWSERENGINE</strong>
+            <span id="subtitle">Cockpit</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="resume" type="button" hidden>Resume</button>
+          <button class="btn danger" id="kill" type="button">Pause</button>
+          <button class="btn" id="detach" type="button">Detach</button>
+          <button class="btn" id="options" type="button">Settings</button>
+        </div>
+      </header>
+      <section class="rail">
+        <div class="pill">
+          <span class="k">Host</span>
+          <span class="v"><i class="dot" id="hostDot"></i><span id="hostText">…</span></span>
+        </div>
+        <div class="pill">
+          <span class="k">Engine</span>
+          <span class="v"><i class="dot" id="engineDot"></i><span id="engineText">…</span></span>
+        </div>
+        <div class="pill">
+          <span class="k">Attach</span>
+          <span class="v"><i class="dot" id="attachDot"></i><span id="attachText">none</span></span>
+        </div>
+        <div class="pill">
+          <span class="k">Policy</span>
+          <span class="v" id="policy">allowlist</span>
+        </div>
+      </section>
+      <section class="card pending" id="pendingCard" hidden>
+        <div class="card-head"><h2>Attach request</h2></div>
+        <div class="body">
+          <p id="pendingText"></p>
+          <p class="origin" id="pendingOrigin"></p>
+          <div class="actions">
+            <button class="btn primary" id="allow" type="button">Allow origin</button>
+            <button class="btn danger" id="deny" type="button">Deny</button>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head">
+          <h2>Tabs</h2>
+          <span class="kbd" id="tabCount">0</span>
+        </div>
+        <div class="form">
+          <input class="search" id="tabQuery" type="search" placeholder="Filter title or host" />
+          <div class="inline" style="margin-top: 8px">
+            <input class="grow" id="newTabUrl" type="text" placeholder="https:// — new tab" />
+            <button class="btn primary" id="newTab" type="button">Open</button>
+          </div>
+        </div>
+        <div id="tabs"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Allowed origins</h2></div>
+        <div class="form">
+          <div class="chips" id="origins"></div>
+          <div class="inline" style="margin-top: 10px">
+            <input
+              class="grow"
+              id="originInput"
+              type="text"
+              placeholder="https://example.com or https://*"
+            />
+            <button class="btn" id="addOrigin" type="button">Allow</button>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Activity</h2></div>
+        <div class="log" id="activity"></div>
+      </section>
+      <p class="toast">
+        Grok drives this Brave. New hosts prompt here.
+        <span class="kbd">Ctrl+Shift+E</span> panel <span class="kbd">Ctrl+Shift+U</span> pause
+      </p>
+    </div>
+    <script type="module" src="panel.js"></script>
+  </body>
+</html>

@@ -19,6 +19,20 @@ describe('parseStepFailure', () => {
       action: 'type',
       message: 'miss',
     })
+    expect(parseStepFailure('step 2 click: no target for click name=Login candidates=')).toEqual({
+      step: 2,
+      action: 'click',
+      message: 'no target for click name=Login candidates=',
+    })
+    expect(
+      parseStepFailure(
+        'step 2 click: ambiguous target for click name=Login candidates=button:Login;button:Login',
+      ),
+    ).toEqual({
+      step: 2,
+      action: 'click',
+      message: 'ambiguous target for click name=Login candidates=button:Login;button:Login',
+    })
   })
 
   it('returns undefined when the line is not a step failure', () => {

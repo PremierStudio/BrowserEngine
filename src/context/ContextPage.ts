@@ -15,6 +15,7 @@ import { getPageDialog, DialogTracker } from './dialogPage.js'
 import { emulatePage } from './emulatePage.js'
 import { followWindowIfResized } from './followWindow.js'
 import { observePage } from './observePage.js'
+import type { BrowserEvent } from '../events/types.js'
 import type { PageState } from './observeExtras.js'
 import { resolveUid } from './resolveUid.js'
 import { createActionWaiter, memoryMutationSource } from './waitAfterAction.js'
@@ -26,6 +27,7 @@ export interface ObserveResult {
   image: string
   overlay: Overlay
   pageState: PageState
+  events?: readonly BrowserEvent[]
 }
 
 /** Optional waiter wiring for tests and the live MutationObserver. */

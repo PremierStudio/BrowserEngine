@@ -10,18 +10,20 @@ typecheck → lint → format → knip → unit tests → coverage (100%) → mu
 npm run ci
 ```
 
-| Command                    | What it does                                               |
-| -------------------------- | ---------------------------------------------------------- |
-| `npm run typecheck`        | `tsc --noEmit`                                             |
-| `npm run lint`             | ESLint (bans `as`/`any`/`!`/`@ts-ignore`/`.forEach`)       |
-| `npm run format`           | Prettier check                                             |
-| `npm run knip`             | dead code / unused deps (zero findings)                    |
-| `npm test`                 | Vitest                                                     |
-| `npm run test:integration` | Real Chrome (set `BROWSER_ENGINE_INTEGRATION=1`)           |
-| `npm run showcase`         | Long headed public-site demo (`BROWSER_ENGINE_SHOWCASE=1`) |
-| `npm run coverage`         | 100% threshold (lines/branches/functions/statements)       |
-| `npm run mutation`         | Stryker, 100% threshold + survivor registry                |
-| `npm run reports`          | coverage + JUnit XML into `reports/`                       |
+| Command                    | What it does                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `npm run typecheck`        | `tsc --noEmit`                                                                 |
+| `npm run lint`             | ESLint (bans `as`/`any`/`!`/`@ts-ignore`/`.forEach`)                           |
+| `npm run format`           | Prettier check                                                                 |
+| `npm run knip`             | dead code / unused deps (zero findings)                                        |
+| `npm test`                 | Vitest                                                                         |
+| `npm run test:integration` | Real Chrome (set `BROWSER_ENGINE_INTEGRATION=1`)                               |
+| `npm run ci:local-run`     | CLI `run` against local click-go HTML (headless)                               |
+| `npm run build:scripts`    | Emit hook runners to `dist-scripts/hooks/` (`prepare` runs this after `build`) |
+| `npm run showcase`         | Long headed public-site demo (`BROWSER_ENGINE_SHOWCASE=1`)                     |
+| `npm run coverage`         | 100% threshold (lines/branches/functions/statements)                           |
+| `npm run mutation`         | Stryker, 100% threshold + survivor registry                                    |
+| `npm run reports`          | coverage + JUnit XML into `reports/`                                           |
 
 - **100% coverage** (lines/branches/functions/statements) via Vitest + `@vitest/coverage-v8`.
 - **100% mutation score** via Stryker. The only escape is a named entry in `mutation-survivors.json`.
@@ -30,7 +32,7 @@ npm run ci
 - **No banned constructs.** `as`, `any`, `!`, `@ts-ignore` / `@ts-nocheck` / `@ts-expect-error`, and `.forEach` are lint errors.
 - **Deterministic tests.** Clocks and timers are injected. No sleeps.
 
-The spec is [`mvp.md`](mvp.md). Amendments in [`decisions.md`](decisions.md) win when they conflict. Agent rules are in [`../AGENTS.md`](../AGENTS.md).
+Settled rules are in [`decisions.md`](decisions.md). [`mvp.md`](mvp.md) is the original implementer brief; decisions win when they conflict. Agent rules are in [`../AGENTS.md`](../AGENTS.md).
 
 ## Stack
 

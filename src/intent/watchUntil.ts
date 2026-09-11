@@ -110,9 +110,20 @@ export function checkWatch(matched: boolean, now: number, deadline: number): Wat
  * Polls observe/events until the condition matches or the timeout elapses.
  * Clock and sleep are injected so the loop is deterministic in tests.
  */
+export type WatchView = {
+  snapshot: SnapshotNode
+  events?: readonly BrowserEvent[]
+}
+
+export function eventsOf(view: WatchView): BrowserEvent[] {
+  if (view.events === undefined) {
+    return []
+  }
+  return [...view.events]
+}
+
 export async function watchUntil(
-  observe: () => Promise<SnapshotNode>,
-  events: () => BrowserEvent[],
+  observe: () => Promise<WatchView>,
   condition: WatchCondition,
   options: WatchOptions,
 ): Promise<{ matched: boolean; reason: string }> {
@@ -121,8 +132,8 @@ export async function watchUntil(
   const poll = options.poll ?? DEFAULT_POLL
   const deadline = clock() + options.timeout
   for (;;) {
-    const snapshot = await observe()
-    const matched = matchesWatch(snapshot, events(), condition)
+    const view = await observe()
+    const matched = matchesWatch(view.snapshot, eventsOf(view), condition)
     const status = checkWatch(matched, clock(), deadline)
     if (status === 'matched') {
       return { matched: true, reason: 'condition met' }

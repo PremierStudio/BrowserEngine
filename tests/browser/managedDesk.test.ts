@@ -289,4 +289,34 @@ describe('createManagedDesk', () => {
     expect(killed).toEqual([])
     expect(after.closed.map((row) => row.id)).toEqual(['ghost'])
   })
+
+  it('does not kill when an attached session has no Chrome pid', async () => {
+    const killed: number[] = []
+    const session = fakeSession(0, 'https://brave.example')
+    const attached: ChromeSession = {
+      pid: undefined,
+      host: session.host,
+      close: session.close,
+    }
+    const desk = createBrowserDesk({
+      id: 'mine',
+      mcpPid: 10,
+      clock: () => 1000,
+      isAlive: (pid) => pid === 10,
+      store: memoryStore(),
+    })
+    const managed = createManagedDesk({
+      desk,
+      headed: true,
+      launch: async () => attached,
+      kill: (pid) => {
+        killed.push(pid)
+      },
+    })
+    await managed.open()
+    const closed = await managed.close()
+    expect(session.closed).toBe(true)
+    expect(killed).toEqual([])
+    expect(closed.open).toBe(false)
+  })
 })

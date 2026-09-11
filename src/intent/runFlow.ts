@@ -1,6 +1,7 @@
 import type { ContextPage, ObserveResult } from '../context/ContextPage.js'
 import { outlineFromUnknown, type OutlineItem } from '../snapshot/outline.js'
 import { compileFlow } from './compileFlow.js'
+import { argvHasHeaded } from '../browser/launchOptions.js'
 import { foldLabel } from '../label.js'
 import { bindTarget, formatBindFailure } from './resolveTarget.js'
 import { verify } from './verify.js'
@@ -27,12 +28,15 @@ export type RunFlowOptions = {
  * Visible window: watchable pace. Headless is instant.
  * `BROWSER_ENGINE_PACE_MS` overrides (including 0).
  */
-export function flowPaceMs(env: Record<string, string | undefined>): number {
+export function flowPaceMs(
+  env: Record<string, string | undefined>,
+  argv?: readonly string[],
+): number {
   const parsed = Number(env.BROWSER_ENGINE_PACE_MS)
   if (Number.isFinite(parsed) && parsed >= 0) {
     return parsed
   }
-  if (env.BROWSER_ENGINE_HEADED === '0') {
+  if (env.BROWSER_ENGINE_HEADED === '0' && !argvHasHeaded(argv)) {
     return 0
   }
   return HUMAN_PACE_MS
@@ -45,8 +49,8 @@ export function runFlowToolOptions(
   clock: () => number,
 ): RunFlowOptions {
   return {
-    paceMs: flowPaceMs(env),
-    expectTimeoutMs: flowExpectTimeoutMs(env),
+    paceMs: flowPaceMs(env, process.argv),
+    expectTimeoutMs: flowExpectTimeoutMs(env, process.argv),
     sleep,
     clock,
   }
@@ -56,12 +60,15 @@ export function runFlowToolOptions(
  * Visible window: wait for expects. Headless is one shot.
  * `BROWSER_ENGINE_EXPECT_MS` overrides (including 0).
  */
-export function flowExpectTimeoutMs(env: Record<string, string | undefined>): number {
+export function flowExpectTimeoutMs(
+  env: Record<string, string | undefined>,
+  argv?: readonly string[],
+): number {
   const parsed = Number(env.BROWSER_ENGINE_EXPECT_MS)
   if (Number.isFinite(parsed) && parsed >= 0) {
     return parsed
   }
-  if (env.BROWSER_ENGINE_HEADED === '0') {
+  if (env.BROWSER_ENGINE_HEADED === '0' && !argvHasHeaded(argv)) {
     return 0
   }
   return DEFAULT_EXPECT_TIMEOUT_MS
@@ -171,36 +178,59 @@ async function resolveStepUid(
   }
 }
 
+export function throwCompileError(
+  steps: readonly FlowStep[],
+  compiled: { error: string; index: number },
+): never {
+  for (const [index, step] of steps.entries()) {
+    if (index === compiled.index) {
+      throwStepError(index, step, compiled.error)
+    }
+  }
+  throw new Error(`step ${String(compiled.index + 1)} flow: ${compiled.error}`)
+}
+
+function isNumberedStepError(error: unknown): boolean {
+  return error instanceof Error && /^step [1-9]/.test(error.message)
+}
+
 async function compileAgainstPage(
   page: ContextPage,
   steps: FlowStep[],
   options: RunFlowOptions,
 ): Promise<{ planned: FlowStep[]; outline: OutlineItem[] }> {
-  let outline = await readOutline(page)
-  let compiled = compileFlow(outline, steps)
-  if (compiled.ok) {
-    return { planned: compiled.steps, outline }
-  }
-  const polling = pollSetup(options)
-  if (polling === undefined) {
-    outline = await readOutline(page)
-    compiled = compileFlow(outline, steps)
-    if (!compiled.ok) {
-      throw new Error(compiled.error)
-    }
-    return { planned: compiled.steps, outline }
-  }
-  const deadline = polling.clock() + polling.timeout
-  for (;;) {
-    outline = await readOutline(page)
-    compiled = compileFlow(outline, steps)
+  try {
+    let outline = await readOutline(page)
+    let compiled = compileFlow(outline, steps)
     if (compiled.ok) {
       return { planned: compiled.steps, outline }
     }
-    if (polling.clock() >= deadline) {
-      throw new Error(compiled.error)
+    const polling = pollSetup(options)
+    if (polling === undefined) {
+      outline = await readOutline(page)
+      compiled = compileFlow(outline, steps)
+      if (!compiled.ok) {
+        throwCompileError(steps, compiled)
+      }
+      return { planned: compiled.steps, outline }
     }
-    await polling.sleep(polling.poll)
+    const deadline = polling.clock() + polling.timeout
+    for (;;) {
+      outline = await readOutline(page)
+      compiled = compileFlow(outline, steps)
+      if (compiled.ok) {
+        return { planned: compiled.steps, outline }
+      }
+      if (polling.clock() >= deadline) {
+        throwCompileError(steps, compiled)
+      }
+      await polling.sleep(polling.poll)
+    }
+  } catch (error) {
+    if (isNumberedStepError(error)) {
+      throw error
+    }
+    throwStepError(0, { action: 'observe' }, error)
   }
 }
 
@@ -275,15 +305,9 @@ export async function runFlow(
   let planned = steps
   let outline: OutlineItem[] | undefined
   if (steps.length > 0) {
-    try {
-      const compiled = await compileAgainstPage(page, steps, options)
-      planned = compiled.planned
-      outline = compiled.outline
-    } catch (error) {
-      for (const step of steps) {
-        throwStepError(0, step, error)
-      }
-    }
+    const compiled = await compileAgainstPage(page, steps, options)
+    planned = compiled.planned
+    outline = compiled.outline
   }
   for (const [index, step] of planned.entries()) {
     try {

@@ -66,6 +66,7 @@ describe('typeCharMs', () => {
     expect(typeCharMs({ BROWSER_ENGINE_HEADED: '1', BROWSER_ENGINE_TYPE_MS: '0' })).toBe(0)
     expect(typeCharMs({ BROWSER_ENGINE_TYPE_MS: '-1' })).toBe(HUMAN_TYPE_MS)
     expect(typeCharMs({ BROWSER_ENGINE_HEADED: '0', BROWSER_ENGINE_TYPE_MS: 'nope' })).toBe(0)
+    expect(typeCharMs({ BROWSER_ENGINE_HEADED: '0' }, ['--headed'])).toBe(HUMAN_TYPE_MS)
   })
 })
 

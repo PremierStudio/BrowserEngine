@@ -3,6 +3,7 @@ import type { StdioServerHandle } from '@modelcontextprotocol/server/stdio'
 import { buildIntentTools } from '../intent/intentTools.js'
 import { createRuntime, type RuntimeOptions } from '../session/runtime.js'
 import { buildBrowserDeskTools } from '../tools/browserDeskTools.js'
+import type { ToolDefinition } from '../tools/types.js'
 import { buildTools } from './buildTools.js'
 import { createHttpHandler } from './http.js'
 import { createServer } from './server.js'
@@ -16,8 +17,10 @@ export type Serve = (factory: ServerFactory) => StdioServerHandle
 const SERVER_NAME = 'browser-engine'
 const SERVER_VERSION = '0.0.1'
 
-/** Optional page and event source for the default server. */
-export type DefaultServerOptions = RuntimeOptions
+/** Optional page, event source, and extra MCP tools for the default server. */
+export type DefaultServerOptions = RuntimeOptions & {
+  extraTools?: ToolDefinition[]
+}
 
 /**
  * Builds the fully-wired default server: page tools, confirm_action (MRTR),
@@ -30,7 +33,12 @@ export function createDefaultServer(options: DefaultServerOptions = {}): McpServ
   return createServer(
     { name: SERVER_NAME, version: SERVER_VERSION },
     {
-      tools: [...buildBrowserDeskTools(runtime.controller), ...buildTools(), ...buildIntentTools()],
+      tools: [
+        ...buildBrowserDeskTools(runtime.controller),
+        ...buildTools(),
+        ...buildIntentTools({ runner: runtime.runner }),
+        ...(options.extraTools ?? []),
+      ],
       events: runtime.events,
       tasks: { store: runtime.store, runner: runtime.runner },
       actions: runtime.actions,

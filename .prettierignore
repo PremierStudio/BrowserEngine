@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+reports/
+dist/
+dist-scripts/
+.stryker-tmp/
+extension/*.js
+extension/native/*.js
+# Chrome launcher / installer shell scripts: Prettier has no Bash parser.
+extension/**/*.sh

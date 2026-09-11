@@ -45,4 +45,14 @@ describe('CI mutation cache', () => {
     expect(workflow).toContain('stryker-incremental-${{ runner.os }}-${{ github.sha }}')
     expect(workflow).toContain('stryker-incremental-${{ runner.os }}-')
   })
+
+  it('uploads the reports artifact for humans', () => {
+    expect(workflow).toContain('actions/upload-artifact@')
+  })
+
+  it('runs the local click-go CLI after build', () => {
+    expect(workflow).toContain('node dist/testing/clickGoMain.js')
+    expect(workflow).toContain("BROWSER_ENGINE_HEADED: '0'")
+    expect(workflow).toContain("BROWSER_ENGINE_NO_SANDBOX: '1'")
+  })
 })

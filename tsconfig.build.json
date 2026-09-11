@@ -7,5 +7,12 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "src/extension/background.ts",
+    "src/extension/popup.ts",
+    "src/extension/panel.ts",
+    "src/extension/options.ts",
+    "src/extension/nativeHost.ts"
+  ]
 }

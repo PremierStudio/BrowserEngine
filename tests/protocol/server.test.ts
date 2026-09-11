@@ -163,6 +163,36 @@ describe('createServer', () => {
     await client.close()
   })
 
+  it('notifies browser://events after a tool call when the buffer grew', async () => {
+    const buffer = new EventBuffer(10)
+    const ping: ToolDefinition = {
+      name: 'ping',
+      description: 'Pings',
+      category: 'observe',
+      experimental: false,
+      readOnly: true,
+      inputSchema: z.object({}),
+      handler: async () => 'pong',
+    }
+    const server = createServer(
+      { name: 'browser-engine', version: '0.0.1' },
+      { tools: [ping], events: buffer },
+    )
+    const notified: string[] = []
+    const original = server.server.sendResourceUpdated.bind(server.server)
+    server.server.sendResourceUpdated = (params: { uri: string }) => {
+      notified.push(params.uri)
+      return original(params)
+    }
+    const client = await connectClient(server)
+    buffer.push({ type: 'console', timestamp: 2, level: 'log', text: 'later' })
+    await client.request(2, 'tools/call', { name: 'ping', arguments: {} })
+    expect(notified).toEqual(['browser://events'])
+    await client.request(3, 'tools/call', { name: 'ping', arguments: {} })
+    expect(notified).toEqual(['browser://events'])
+    await client.close()
+  })
+
   it('records each tools/call into list_calls', async () => {
     const tool: ToolDefinition = {
       name: 'ping',

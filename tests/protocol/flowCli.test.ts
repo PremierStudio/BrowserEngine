@@ -4,7 +4,16 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { saveFlow, serializeFlowFile } from '../../src/intent/flowFile.js'
 import type { FlowFile } from '../../src/intent/flowFile.js'
-import { executeFlowCli, parseCliCommand } from '../../src/protocol/flowCli.js'
+import { cliToken, executeFlowCli, parseCliCommand } from '../../src/protocol/flowCli.js'
+
+describe('cliToken', () => {
+  it('turns a missing argv slot into an empty string and keeps real tokens', () => {
+    expect(cliToken(undefined)).toBe('')
+    expect(cliToken('')).toBe('')
+    expect(cliToken('--cdp-url')).toBe('--cdp-url')
+    expect(cliToken('flows/a.json')).toBe('flows/a.json')
+  })
+})
 
 const saved = saveFlow({
   name: 'login',
@@ -31,6 +40,33 @@ describe('parseCliCommand', () => {
     expect(parseCliCommand(['node', 'cli.js', '--headed'])).toEqual({ kind: 'mcp' })
     expect(parseCliCommand(['node', 'cli.js', '--http', '--headed'])).toEqual({ kind: 'http' })
     expect(parseCliCommand(['node', 'cli.js', 'run', '--headed', 'flows/a.json'])).toEqual({
+      kind: 'run',
+      path: 'flows/a.json',
+      json: false,
+      report: undefined,
+      junit: undefined,
+    })
+  })
+
+  it('ignores --cdp-url and its value so MCP and run still parse', () => {
+    expect(parseCliCommand(['node', 'cli.js', '--cdp-url'])).toEqual({ kind: 'mcp' })
+    expect(parseCliCommand(['node', 'cli.js', '--http', '--cdp-url'])).toEqual({ kind: 'http' })
+    expect(parseCliCommand(['node', 'cli.js', '--cdp-url', 'http://127.0.0.1:9222'])).toEqual({
+      kind: 'mcp',
+    })
+    expect(
+      parseCliCommand(['node', 'cli.js', '--http', '--cdp-url', 'http://127.0.0.1:9222']),
+    ).toEqual({ kind: 'http' })
+    expect(
+      parseCliCommand([
+        'node',
+        'cli.js',
+        'run',
+        '--cdp-url',
+        'http://127.0.0.1:9222',
+        'flows/a.json',
+      ]),
+    ).toEqual({
       kind: 'run',
       path: 'flows/a.json',
       json: false,

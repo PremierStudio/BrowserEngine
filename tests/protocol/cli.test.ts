@@ -9,6 +9,9 @@ import {
 import { STDIO_LINE_BUDGET } from '../../src/protocol/tools.js'
 import { createLazyContextPage } from '../../src/context/lazyPage.js'
 import type { ContextPage } from '../../src/context/ContextPage.js'
+import { z } from 'zod'
+import { defineTool } from '../../src/tools/defineTool.js'
+import { ToolCategory } from '../../src/tools/types.js'
 
 function fakePage(): ContextPage {
   return {
@@ -243,6 +246,50 @@ describe('createDefaultServer', () => {
     await client.request(4, 'tools/call', { name: 'observe', arguments: {} })
     expect(opens).toBe(1)
     await client.close()
+  })
+
+  it('records run_flow on list_tasks through the default runner', async () => {
+    const previous = process.env.BROWSER_ENGINE_HEADED
+    process.env.BROWSER_ENGINE_HEADED = '0'
+    try {
+      const server = createDefaultServer({ page: fakePage() })
+      const client = await connectClient(server)
+      const ran = resultOf(
+        await client.request(2, 'tools/call', {
+          name: 'run_flow',
+          arguments: { steps: [{ action: 'click', uid: 'x' }] },
+        }),
+      )
+      expect(ran.structuredContent).toMatchObject({ ok: true, steps: 1 })
+      const listed = resultOf(
+        await client.request(3, 'tools/call', { name: 'list_tasks', arguments: {} }),
+      )
+      expect(listed.structuredContent).toMatchObject({
+        value: [expect.objectContaining({ name: 'run_flow', status: 'completed' })],
+      })
+      await client.close()
+    } finally {
+      if (previous === undefined) {
+        delete process.env.BROWSER_ENGINE_HEADED
+      } else {
+        process.env.BROWSER_ENGINE_HEADED = previous
+      }
+    }
+  })
+
+  it('registers extraTools after the default set', () => {
+    const server = createDefaultServer({
+      extraTools: [
+        defineTool({
+          name: 'extension_status',
+          description: 'test',
+          category: ToolCategory.Observe,
+          inputSchema: z.object({}),
+          handler: async () => ({ ok: true }),
+        }),
+      ],
+    })
+    expect(server.toolInputSchemaJson('extension_status')).toBeDefined()
   })
 
   it('accepts a page and still exposes observe', async () => {

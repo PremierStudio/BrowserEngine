@@ -56,6 +56,31 @@ describe('compileFlow', () => {
     }
   })
 
+  it('names the failing step index for a later unknown action', () => {
+    const result = compileFlow(shop, [
+      { action: 'hover', name: 'Sauce Labs Backpack' },
+      { action: 'explode' },
+    ])
+    expect(result).toEqual({
+      ok: false,
+      error: 'unknown action: explode',
+      index: 1,
+    })
+  })
+
+  it('names the failing step index for a later same-page miss', () => {
+    const result = compileFlow(shop, [
+      { action: 'hover', name: 'Sauce Labs Backpack' },
+      { action: 'click', name: 'Add to cart' },
+    ])
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect('index' in result).toBe(true)
+      expect('index' in result && result.index).toBe(1)
+      expect(result.error).toMatch(/ambiguous target for click name=Add to cart/)
+    }
+  })
+
   it('refuses a missing name and lists candidates', () => {
     const result = compileFlow(login, [{ action: 'click', name: 'Checkout' }])
     expect(result.ok).toBe(false)
@@ -126,22 +151,32 @@ describe('compileFlow', () => {
     expect(compileFlow([], [{ action: 'explode' }])).toEqual({
       ok: false,
       error: 'unknown action: explode',
+      index: 0,
     })
     expect(compileFlow([], [{ action: 'press' }])).toEqual({
       ok: false,
       error: 'action press requires key',
+      index: 0,
     })
     expect(compileFlow([], [{ action: 'navigate' }])).toEqual({
       ok: false,
       error: 'action navigate requires url',
+      index: 0,
     })
     expect(compileFlow([], [{ action: 'check' }])).toEqual({
       ok: false,
       error: 'action check requires expectUrl or expectText',
+      index: 0,
     })
     expect(compileFlow([], [{ action: 'click' }])).toEqual({
       ok: false,
       error: 'action click requires uid or name',
+      index: 0,
+    })
+    expect(compileFlow([], [{ action: 'type', name: '   ', text: 'x' }])).toEqual({
+      ok: false,
+      error: 'action type requires uid or name',
+      index: 0,
     })
   })
 
@@ -151,6 +186,7 @@ describe('compileFlow', () => {
     ).toEqual({
       ok: false,
       error: 'action click requires expectUrl or expectText',
+      index: 0,
     })
     expect(
       compileFlow([], [{ action: 'navigate', url: 'https://example.com' }], {
@@ -159,6 +195,7 @@ describe('compileFlow', () => {
     ).toEqual({
       ok: false,
       error: 'action navigate requires expectUrl or expectText',
+      index: 0,
     })
     expect(
       compileFlow(login, [{ action: 'click', name: 'Login', expectUrl: '/secure' }], {

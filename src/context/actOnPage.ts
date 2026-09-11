@@ -8,6 +8,7 @@ import {
   typeHudCommitDeclaration,
   typeHudFocusDeclaration,
 } from '../browser/actionHud.js'
+import { argvHasHeaded } from '../browser/launchOptions.js'
 import type { PageLike } from './ContextPage.js'
 import { parseUid } from '../uid.js'
 
@@ -54,12 +55,15 @@ export type TypeOptions = {
 }
 
 /** Visible window types like a person. Headless dumps instantly. */
-export function typeCharMs(env: Record<string, string | undefined>): number {
+export function typeCharMs(
+  env: Record<string, string | undefined>,
+  argv?: readonly string[],
+): number {
   const parsed = Number(env.BROWSER_ENGINE_TYPE_MS)
   if (Number.isFinite(parsed) && parsed >= 0) {
     return parsed
   }
-  if (env.BROWSER_ENGINE_HEADED === '0') {
+  if (env.BROWSER_ENGINE_HEADED === '0' && !argvHasHeaded(argv)) {
     return 0
   }
   return HUMAN_TYPE_MS

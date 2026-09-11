@@ -12,10 +12,30 @@ import { defaultClock, defaultSleep } from './watchUntil.js'
 import { verify, type Assertion } from './verify.js'
 import { watchUntil, type WatchCondition } from './watchUntil.js'
 import type { BrowserEvent } from '../events/types.js'
+import type { ObserveResult } from '../context/ContextPage.js'
+import type { TaskRunner } from '../tasks/TaskRunner.js'
 
-/** Empty event list used by watch_until until a live event feed is wired. */
-export function noWatchEvents(): BrowserEvent[] {
-  return []
+/** Optional task recording for the long-running intent tools. */
+export type IntentToolOptions = {
+  readonly runner?: TaskRunner
+}
+
+function eventsFromObserve(observed: ObserveResult): BrowserEvent[] {
+  if (observed.events === undefined) {
+    return []
+  }
+  return [...observed.events]
+}
+
+async function maybeTrack<T>(
+  runner: TaskRunner | undefined,
+  name: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  if (runner === undefined) {
+    return fn()
+  }
+  return runner.track(name, fn)
 }
 
 /** Builds the explain() diff target. Exported so tests pin `kind: 'diff'`. */
@@ -79,7 +99,7 @@ function isDiffResult(value: unknown): value is DiffResult {
 }
 
 /** The M6 intent tools: watch_until, compile_flow, run_flow, verify, explain. */
-export function buildIntentTools(): ToolDefinition[] {
+export function buildIntentTools(options: IntentToolOptions = {}): ToolDefinition[] {
   return [
     definePageTool({
       name: 'watch_until',
@@ -95,11 +115,15 @@ export function buildIntentTools(): ToolDefinition[] {
           throw new Error('invalid args')
         }
         const contextPage = requirePage(page)
-        return watchUntil(
-          async () => (await contextPage.observe()).snapshot,
-          noWatchEvents,
-          { kind: args.kind, value: args.value },
-          { timeout: args.timeout },
+        return maybeTrack(options.runner, 'watch_until', async () =>
+          watchUntil(
+            async () => {
+              const observed = await contextPage.observe()
+              return { snapshot: observed.snapshot, events: eventsFromObserve(observed) }
+            },
+            { kind: args.kind, value: args.value },
+            { timeout: args.timeout },
+          ),
         )
       },
     }),
@@ -135,10 +159,12 @@ export function buildIntentTools(): ToolDefinition[] {
         if (!isFlowArgs(args)) {
           throw new Error('invalid args')
         }
-        return runFlow(
-          requirePage(page),
-          args.steps,
-          runFlowToolOptions(process.env, defaultSleep, defaultClock),
+        return maybeTrack(options.runner, 'run_flow', () =>
+          runFlow(
+            requirePage(page),
+            args.steps,
+            runFlowToolOptions(process.env, defaultSleep, defaultClock),
+          ),
         )
       },
     }),

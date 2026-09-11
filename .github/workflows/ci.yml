@@ -45,6 +45,12 @@ jobs:
       - name: Compile fixture via CLI
         run: node dist/cli.js compile tests/fixtures/login.flow.json
 
+      - name: Click-go smoke (real Chrome, local HTML)
+        run: node dist/testing/clickGoMain.js
+        env:
+          BROWSER_ENGINE_HEADED: '0'
+          BROWSER_ENGINE_NO_SANDBOX: '1'
+
       - name: Coverage (100% gate)
         run: npm run coverage
 

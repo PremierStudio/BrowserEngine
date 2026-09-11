@@ -3,19 +3,12 @@ import type { Browser } from 'puppeteer'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { toPageLikeFromUnknown } from '../../src/browser/adaptPage.js'
 import { PuppeteerContextPage } from '../../src/context/ContextPage.js'
-import { saveFlow } from '../../src/intent/flowFile.js'
 import { runFlowFile } from '../../src/intent/runFlowFile.js'
+import { clickGoFlow, CLICK_GO_HTML } from '../../src/testing/clickGoFixture.js'
 import { startLocalHtmlServer } from '../../src/testing/localHtmlServer.js'
 import { executeFlowCli } from '../../src/protocol/flowCli.js'
 
 const enabled = process.env.BROWSER_ENGINE_INTEGRATION === '1'
-
-const FLOW_HTML =
-  '<!doctype html><html lang="en"><head><title>Start</title></head><body>' +
-  '<h1>Start</h1><button type="button" id="go">Go</button>' +
-  '<script>document.getElementById("go").addEventListener("click",function(){' +
-  'document.title="Done";document.querySelector("h1").textContent="Done";});</script>' +
-  '</body></html>'
 
 describe.skipIf(!enabled)('chrome flow file', () => {
   let server: Awaited<ReturnType<typeof startLocalHtmlServer>> | undefined
@@ -23,7 +16,7 @@ describe.skipIf(!enabled)('chrome flow file', () => {
   let launchError: string | undefined
 
   beforeAll(async () => {
-    server = await startLocalHtmlServer(FLOW_HTML)
+    server = await startLocalHtmlServer(CLICK_GO_HTML)
     try {
       const puppeteer = (await import('puppeteer')).default
       browser = await puppeteer.launch({ headless: true, timeout: 15000 })
@@ -50,18 +43,7 @@ describe.skipIf(!enabled)('chrome flow file', () => {
       ctx.skip('local HTML server did not start')
       return
     }
-    const saved = saveFlow({
-      name: 'click-go',
-      origin: server.url,
-      steps: [
-        { action: 'navigate', url: server.url, expectText: 'Start' },
-        { action: 'click', name: 'Go', expectText: 'Done' },
-      ],
-    })
-    expect(saved.ok).toBe(true)
-    if (!saved.ok) {
-      return
-    }
+    const saved = { ok: true as const, file: clickGoFlow(server.url) }
     const compiled: string[] = []
     const compileCode = await executeFlowCli(
       { kind: 'compile', path: 'click-go.json', json: false },

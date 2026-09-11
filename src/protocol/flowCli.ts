@@ -52,6 +52,14 @@ function isFlagValue(value: string | undefined): value is string {
   return value !== undefined && value !== '' && !value.startsWith('--')
 }
 
+/** Missing argv slots become an empty token so parse stays defined. */
+export function cliToken(value: string | undefined): string {
+  if (value === undefined) {
+    return ''
+  }
+  return value
+}
+
 function parseFileCommand(kind: 'run' | 'compile', rest: readonly string[]): CliCommand {
   let json = false
   let report: string | undefined
@@ -59,10 +67,7 @@ function parseFileCommand(kind: 'run' | 'compile', rest: readonly string[]): Cli
   let path: string | undefined
   const args = [...rest]
   while (args.length > 0) {
-    const arg = args.shift()
-    if (arg === undefined) {
-      return { kind: 'usage', error: FLOW_CLI_USAGE }
-    }
+    const arg = cliToken(args.shift())
     if (arg === '--json') {
       json = true
       continue
@@ -94,19 +99,25 @@ function parseFileCommand(kind: 'run' | 'compile', rest: readonly string[]): Cli
   return { kind, path, json, report, junit }
 }
 
-function withoutHeadedFlag(argv: readonly string[]): string[] {
+function withoutEngineFlags(argv: readonly string[]): string[] {
   const kept: string[] = []
-  for (const arg of argv) {
-    if (arg !== '--headed') {
-      kept.push(arg)
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i]
+    if (arg === '--headed') {
+      continue
     }
+    if (arg === '--cdp-url') {
+      i += 1
+      continue
+    }
+    kept.push(cliToken(arg))
   }
   return kept
 }
 
 /** Read process.argv after node and the script path. */
 export function parseCliCommand(argv: readonly string[]): CliCommand {
-  const args = withoutHeadedFlag(argv).slice(2)
+  const args = withoutEngineFlags(argv).slice(2)
   const head = args[0]
   if (head === 'run' || head === 'compile') {
     return parseFileCommand(head, args.slice(1))

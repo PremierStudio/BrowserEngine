@@ -5,7 +5,6 @@ import { CallLog } from '../../src/tools/callTrace.js'
 import { confirmGate } from '../../src/protocol/mrtr.js'
 import {
   finalizeToolResult,
-  initServer,
   registerTools,
   toToolAnnotations,
   type ToolCaller,
@@ -152,6 +151,24 @@ describe('registerTools', () => {
     await client.close()
   })
 
+  it('runs afterCall after each tools/call', async () => {
+    const server = new McpServer(
+      { name: 'test', version: '0.0.1' },
+      { capabilities: { tools: {} } },
+    )
+    const ticks: string[] = []
+    registerTools(server, [makeTool({ name: 'ping' })], makeCaller(), {
+      afterCall: () => {
+        ticks.push('after')
+      },
+    })
+    const client = await connectClient(server)
+    expect(ticks).toEqual([])
+    await client.request(2, 'tools/call', { name: 'ping', arguments: { value: 'x' } })
+    expect(ticks).toEqual(['after'])
+    await client.close()
+  })
+
   it('exposes the tool description and annotations through the server', async () => {
     const server = new McpServer(
       { name: 'test', version: '0.0.1' },
@@ -269,16 +286,6 @@ describe('registerTools', () => {
         timestamp: 125,
       },
     ])
-    await client.close()
-  })
-})
-
-describe('initServer', () => {
-  it('creates a server with the implementation info', async () => {
-    const server = initServer('browser-engine', '0.0.1')
-    expect(server).toBeInstanceOf(McpServer)
-    const client = await connectClient(server)
-    expect(client.init.serverInfo).toEqual({ name: 'browser-engine', version: '0.0.1' })
     await client.close()
   })
 })

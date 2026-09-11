@@ -15,6 +15,7 @@
   "files": [
     "dist",
     "docs",
+    "extension",
     "README.md",
     "LICENSE"
   ],
@@ -34,8 +35,11 @@
     "mutation": "stryker run stryker.config.ts",
     "survivors": "npm run build:scripts && node dist-scripts/survivors.js",
     "build:scripts": "tsc -p tsconfig.scripts.json",
-    "build": "tsc -p tsconfig.build.json",
+    "build:extension": "tsc -p tsconfig.extension.json",
+    "build": "tsc -p tsconfig.build.json && npm run build:extension",
+    "prepack": "npm run build",
     "start": "npm run build && node dist/cli.js",
+    "ci:local-run": "node dist/testing/clickGoMain.js",
     "reports": "vitest run --coverage --reporter junit --outputFile reports/junit.xml",
     "ci:survivors": "npm run mutation && npm run survivors",
     "ci": "npm run typecheck && npm run lint && npm run format && npm run knip && npm test && npm run coverage && npm run ci:survivors"
@@ -45,6 +49,7 @@
     "@stryker-mutator/api": "^9.6.1",
     "@stryker-mutator/core": "^9.6.1",
     "@stryker-mutator/vitest-runner": "^9.6.1",
+    "@types/chrome": "^0.2.9",
     "@types/node": "^24.13.3",
     "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^10.8.1",

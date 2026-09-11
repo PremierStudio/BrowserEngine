@@ -6,6 +6,7 @@ import {
   flowPaceMs,
   runFlow,
   runFlowToolOptions,
+  throwCompileError,
 } from '../../src/intent/runFlow.js'
 import { bindTarget } from '../../src/intent/resolveTarget.js'
 import { outlineFromUnknown } from '../../src/snapshot/outline.js'
@@ -67,6 +68,25 @@ describe('flowPaceMs', () => {
     expect(flowPaceMs({ BROWSER_ENGINE_PACE_MS: 'nope' })).toBe(HUMAN_PACE_MS)
     expect(flowPaceMs({ BROWSER_ENGINE_PACE_MS: '-1' })).toBe(HUMAN_PACE_MS)
     expect(flowPaceMs({ BROWSER_ENGINE_HEADED: '0', BROWSER_ENGINE_PACE_MS: 'nope' })).toBe(0)
+    expect(flowPaceMs({ BROWSER_ENGINE_HEADED: '0' }, ['--headed'])).toBe(HUMAN_PACE_MS)
+  })
+})
+
+describe('throwCompileError', () => {
+  it('uses the matching step action, not the last step', () => {
+    expect(() =>
+      throwCompileError(
+        [
+          { action: 'hover', name: 'Go' },
+          { action: 'click', name: 'Login', expectText: 'x' },
+        ],
+        { error: 'unknown action: explode', index: 0 },
+      ),
+    ).toThrow(/^step 1 hover: unknown action: explode$/)
+  })
+
+  it('falls back to flow when the index is missing', () => {
+    expect(() => throwCompileError([], { error: 'gone', index: 0 })).toThrow(/^step 1 flow: gone$/)
   })
 })
 
@@ -91,6 +111,9 @@ describe('flowExpectTimeoutMs', () => {
     expect(
       flowExpectTimeoutMs({ BROWSER_ENGINE_HEADED: '0', BROWSER_ENGINE_EXPECT_MS: 'nope' }),
     ).toBe(0)
+    expect(flowExpectTimeoutMs({ BROWSER_ENGINE_HEADED: '0' }, ['--headed'])).toBe(
+      DEFAULT_EXPECT_TIMEOUT_MS,
+    )
   })
 
   it('packs pace, expect timeout, and timers for the run_flow tool', () => {
@@ -161,7 +184,19 @@ describe('runFlow', () => {
       throw new Error('snapshot failed')
     }
     await expect(runFlow(page, [{ action: 'click', name: 'Login' }])).rejects.toThrow(
-      /^step 1 click: snapshot failed$/,
+      /^step 1 observe: snapshot failed$/,
+    )
+    await expect(
+      runFlow(page, [
+        { action: 'hover', name: 'Sauce Labs Backpack' },
+        { action: 'click', name: 'Add to cart' },
+      ]),
+    ).rejects.toThrow(/^step 1 observe: snapshot failed$/)
+    page.observe = async () => {
+      throw new Error('prefix step 2 click: snapshot failed')
+    }
+    await expect(runFlow(page, [{ action: 'click', name: 'Login' }])).rejects.toThrow(
+      /^step 1 observe: prefix step 2 click: snapshot failed$/,
     )
   })
 
@@ -189,8 +224,11 @@ describe('runFlow', () => {
   it('throws on an unknown action', async () => {
     const page = recordPage()
     await expect(runFlow(page, [{ action: 'explode', uid: 'x' }])).rejects.toThrow(
-      /unknown action/i,
+      /^step 1 explode: unknown action: explode$/,
     )
+    await expect(
+      runFlow(page, [{ action: 'explode' }, { action: 'click', name: 'Login', expectText: 'x' }]),
+    ).rejects.toThrow(/^step 1 explode: unknown action: explode$/)
     await expect(
       runFlow(page, [{ action: 'navigate', url: 'https://example.com' }, { action: 'explode' }]),
     ).rejects.toThrow(/unknown action/i)
@@ -665,7 +703,7 @@ describe('runFlow', () => {
         { action: 'hover', name: 'Sauce Labs Backpack' },
         { action: 'click', name: 'Add to cart' },
       ]),
-    ).rejects.toThrow(/ambiguous target for click name=Add to cart/)
+    ).rejects.toThrow(/^step 2 click: ambiguous target for click name=Add to cart/)
     expect(page.calls).toEqual([])
   })
 

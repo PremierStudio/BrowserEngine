@@ -70,11 +70,17 @@ export function createServer(
       }),
     )
   }
+  const events =
+    wiring.events === undefined
+      ? undefined
+      : createEventResource(server, wiring.events, 'browser://events')
   const registerOptions: RegisterToolsOptions = { traces }
-  registerTools(server, tools, handler, registerOptions)
-  if (wiring.events !== undefined) {
-    createEventResource(server, wiring.events, 'browser://events')
+  if (events !== undefined) {
+    registerOptions.afterCall = () => {
+      events.check()
+    }
   }
+  registerTools(server, tools, handler, registerOptions)
   if (wiring.actions !== undefined) {
     createReplayResource(server, wiring.actions, 'ui://browser-engine/replay')
   }

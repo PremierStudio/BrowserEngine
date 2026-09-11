@@ -14,7 +14,18 @@ const config: StrykerConfig = {
   // Stryker 9 auto-detects only json/js/mjs/cjs; this file must be passed
   // as `stryker run stryker.config.ts` (see package.json "mutation").
   vitest: { configFile: 'vitest.stryker.config.ts' },
-  mutate: ['src/**/*.ts', '!src/cli.ts'],
+  mutate: [
+    'src/**/*.ts',
+    '!src/cli.ts',
+    '!src/testing/clickGoMain.ts',
+    // Browser/native entry points are covered by the same reasoning as
+    // src/cli.ts: they are process boundaries, not importable units.
+    '!src/extension/background.ts',
+    '!src/extension/popup.ts',
+    '!src/extension/panel.ts',
+    '!src/extension/options.ts',
+    '!src/extension/nativeHost.ts',
+  ],
   // perTest + no concurrency cap + ignoreStatic follow the
   // 40-minutes-to-40-seconds methodology: only covering tests run,
   // every core is used, and static mutants (full reload + all tests)

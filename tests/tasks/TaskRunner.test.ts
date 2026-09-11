@@ -11,6 +11,40 @@ describe('TaskRunner', () => {
     expect(task.result).toEqual({ ok: true })
   })
 
+  it('track returns the function result and still records the task', async () => {
+    const store = new TaskStore(() => 'task-1')
+    const runner = new TaskRunner(store)
+    const result = await runner.track('run-flow', async () => ({ ok: true, steps: 2 }))
+    expect(result).toEqual({ ok: true, steps: 2 })
+    expect(store.list()).toEqual([
+      expect.objectContaining({ name: 'run-flow', status: 'completed', result }),
+    ])
+  })
+
+  it('track rethrows and records a failed task', async () => {
+    const store = new TaskStore(() => 'task-1')
+    const runner = new TaskRunner(store)
+    await expect(
+      runner.track('watch-until', async () => {
+        throw new Error('gone')
+      }),
+    ).rejects.toThrow('gone')
+    expect(store.list()).toEqual([
+      expect.objectContaining({ name: 'watch-until', status: 'failed', error: 'gone' }),
+    ])
+  })
+
+  it('track stringifies a non-Error throw', async () => {
+    const store = new TaskStore(() => 'task-1')
+    const runner = new TaskRunner(store)
+    await expect(
+      runner.track('run-flow', async () => {
+        throw 'not-an-error'
+      }),
+    ).rejects.toBe('not-an-error')
+    expect(store.list()[0]?.error).toBe('not-an-error')
+  })
+
   it('marks a task failed when the function throws', async () => {
     const store = new TaskStore(() => 'task-1')
     const runner = new TaskRunner(store)

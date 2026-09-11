@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "extension",
+    "rootDir": "src/extension",
+    "declaration": false,
+    "sourceMap": false,
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "chrome"]
+  },
+  "include": [
+    "src/extension/settings.ts",
+    "src/extension/attachGate.ts",
+    "src/extension/session.ts",
+    "src/extension/nativePort.ts",
+    "src/extension/cockpit.ts",
+    "src/extension/nativeFraming.ts",
+    "src/extension/nativeBridge.ts",
+    "src/extension/nativeHost.ts",
+    "src/extension/background.ts",
+    "src/extension/popup.ts",
+    "src/extension/panel.ts",
+    "src/extension/options.ts"
+  ]
+}

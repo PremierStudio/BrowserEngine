@@ -2,15 +2,15 @@ import type { OutlineItem } from '../snapshot/outline.js'
 import type { FlowStep } from './runFlow.js'
 import { bindTarget, formatBindFailure } from './resolveTarget.js'
 
-/** Optional compile rules. requireExpect is off unless the caller asks. */
+/** Optional compile rules. MCP compile_flow turns requireExpect on unless the caller passes false. */
 export type CompileOptions = {
   requireExpect?: boolean
 }
 
-/** Unique prefix bind, or a structured refusal. */
+/** Unique prefix bind, or a structured refusal. `index` is 0-based. */
 export type CompileResult =
   | { readonly ok: true; readonly steps: FlowStep[]; readonly bound: number }
-  | { readonly ok: false; readonly error: string }
+  | { readonly ok: false; readonly error: string; readonly index: number }
 
 const BINDABLE = new Set(['click', 'type', 'hover', 'scroll', 'select'])
 
@@ -67,26 +67,26 @@ export function compileFlow(
   const compiled: FlowStep[] = []
   let bound = 0
   let open = true
-  for (const step of steps) {
+  for (const [index, step] of steps.entries()) {
     if (!open) {
       compiled.push(cloneStep(step))
       continue
     }
     const error = structuralError(step, options)
     if (error !== undefined) {
-      return { ok: false, error }
+      return { ok: false, error, index }
     }
     if (!BINDABLE.has(step.action)) {
       compiled.push(cloneStep(step))
     } else if (step.uid !== undefined) {
       compiled.push(cloneStep(step))
       bound += 1
-    } else if (step.name === undefined) {
-      return { ok: false, error: `action ${step.action} requires uid or name` }
+    } else if (step.name === undefined || step.name.trim() === '') {
+      return { ok: false, error: `action ${step.action} requires uid or name`, index }
     } else {
       const bind = bindTarget(outline, step)
       if (bind.status !== 'bound') {
-        return { ok: false, error: formatBindFailure(step, bind) }
+        return { ok: false, error: formatBindFailure(step, bind), index }
       }
       compiled.push(cloneStep(step, bind.uid))
       bound += 1

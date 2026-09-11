@@ -1,3 +1,9 @@
+> Historical implementer brief from the start of the project. Not the current
+> product spec. BrowserEngine is a named-intent browser engine with MCP
+> authoring and a no-AI CLI `compile` / `run`. Read `README.md`, `docs/usage.md`,
+> `docs/ci.md`, and `docs/architecture.md` for what shipped. `docs/decisions.md`
+> wins wherever this file conflicts.
+
 You are implementing a new MCP (Model Context Protocol) browser-automation server from scratch. This is a greenfield TypeScript/Node project. Follow the plan exactly, use strict TDD (red first, then green), and do not write any core product code until the entire tooling/test infrastructure is wired in, enforced, and proven.
 
 Project context

@@ -3,6 +3,7 @@ import {
   checkWatch,
   defaultClock,
   defaultSleep,
+  eventsOf,
   matchesWatch,
   watchUntil,
 } from '../../src/intent/watchUntil.js'
@@ -87,6 +88,22 @@ describe('matchesWatch', () => {
   })
 })
 
+describe('eventsOf', () => {
+  it('returns an empty list when the view has no events', () => {
+    expect(eventsOf({ snapshot: tree })).toEqual([])
+    expect(eventsOf({ snapshot: tree })).not.toEqual(['Stryker was here'])
+  })
+
+  it('copies the events so the caller cannot mutate the view', () => {
+    const events: BrowserEvent[] = [{ type: 'console', timestamp: 1, level: 'log', text: 'a' }]
+    const copied = eventsOf({ snapshot: tree, events })
+    expect(copied).toEqual(events)
+    expect(copied).not.toBe(events)
+    events.pop()
+    expect(copied).toHaveLength(1)
+  })
+})
+
 describe('checkWatch', () => {
   it('returns matched when the condition already holds', () => {
     expect(checkWatch(true, 0, 100)).toBe('matched')
@@ -104,8 +121,7 @@ describe('checkWatch', () => {
 describe('watchUntil', () => {
   it('returns matched when the first observe satisfies the condition', async () => {
     const result = await watchUntil(
-      async () => tree,
-      () => [],
+      async () => ({ snapshot: tree }),
       { kind: 'uid', value: 'btn-1' },
       { timeout: 1000, clock: () => 0, sleep: async () => undefined },
     )
@@ -117,9 +133,8 @@ describe('watchUntil', () => {
     const result = await watchUntil(
       async () => {
         n += 1
-        return n >= 2 ? tree : { uid: 'empty', role: 'generic', name: '' }
+        return { snapshot: n >= 2 ? tree : { uid: 'empty', role: 'generic', name: '' } }
       },
-      () => [],
       { kind: 'uid', value: 'btn-1' },
       { timeout: 1000, clock: () => 0, sleep: async () => undefined },
     )
@@ -129,8 +144,7 @@ describe('watchUntil', () => {
 
   it('times out when the condition never matches', async () => {
     const result = await watchUntil(
-      async () => ({ uid: 'empty', role: 'generic', name: '' }),
-      () => [],
+      async () => ({ snapshot: { uid: 'empty', role: 'generic', name: '' } }),
       { kind: 'uid', value: 'btn-1' },
       { timeout: 0, clock: () => 100, sleep: async () => undefined },
     )
@@ -139,8 +153,7 @@ describe('watchUntil', () => {
 
   it('uses the default clock and sleep when the first observe matches', async () => {
     const result = await watchUntil(
-      async () => tree,
-      () => [],
+      async () => ({ snapshot: tree }),
       { kind: 'role', value: 'button' },
       { timeout: 1000 },
     )
@@ -153,9 +166,8 @@ describe('watchUntil', () => {
     await watchUntil(
       async () => {
         n += 1
-        return n >= 2 ? tree : { uid: 'empty', role: 'generic', name: '' }
+        return { snapshot: n >= 2 ? tree : { uid: 'empty', role: 'generic', name: '' } }
       },
-      () => [],
       { kind: 'uid', value: 'btn-1' },
       {
         timeout: 1000,
@@ -167,6 +179,18 @@ describe('watchUntil', () => {
       },
     )
     expect(slept).toBe(7)
+  })
+
+  it('matches an event from the same observe view', async () => {
+    const result = await watchUntil(
+      async () => ({
+        snapshot: { uid: 'empty', role: 'generic', name: '' },
+        events: [{ type: 'console', timestamp: 1, level: 'log', text: 'boom' }],
+      }),
+      { kind: 'event', value: 'boom' },
+      { timeout: 0, clock: () => 0, sleep: async () => undefined },
+    )
+    expect(result).toEqual({ matched: true, reason: 'condition met' })
   })
 
   it('defaultSleep resolves', async () => {

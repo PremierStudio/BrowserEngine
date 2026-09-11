@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BrowserEngine settings</title>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body>
+    <div class="options">
+      <header class="top" style="border-radius: 14px; margin-bottom: 20px">
+        <div class="brand">
+          <div class="mark">BE</div>
+          <div class="brand-copy">
+            <strong>BROWSERENGINE</strong>
+            <span>Every cockpit and engine knob</span>
+          </div>
+        </div>
+      </header>
+      <p class="toast" id="status">Loading…</p>
+      <div class="options-grid" id="form"></div>
+      <div class="savebar">
+        <div class="actions">
+          <button class="btn" id="export" type="button">Export JSON</button>
+          <button class="btn" id="import" type="button">Import JSON</button>
+          <input id="importFile" type="file" accept="application/json" hidden />
+        </div>
+        <div class="actions">
+          <button class="btn" id="reset" type="button">Reset defaults</button>
+          <button class="btn primary" id="save" type="button">Save</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

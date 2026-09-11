@@ -8,7 +8,7 @@ export type StepFailure = {
   message: string
 }
 
-/** Machine-readable result for CI and for an agent that may heal the file. */
+/** Machine-readable result for CI. The caller decides what to do next. */
 export type FlowReport = {
   ok: boolean
   command: FlowReportCommand

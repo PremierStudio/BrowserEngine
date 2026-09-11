@@ -89,8 +89,8 @@ flowchart TB
 | --- | -------------------------------------------------------------------------- | --------- |
 | 1   | **`observe`**: a11y snapshot, screenshot, overlay, outline                 | **M1**    |
 | 2   | **Diff engine**: changes since last observe, fingerprint rebind            | **M2**    |
-| 3   | **Events**: console, network, DOM, navigation, resize                      | **M4**    |
-| 4   | **Action log + HUD**: click, type, hover, scroll, select, press, navigate  | **M3**    |
+| 3   | **Events**: console, network, DOM, navigation, resize                      | **M3**    |
+| 4   | **Action log + HUD**: click, type, hover, scroll, select, press, navigate  | **M4**    |
 | 5   | **Intent**: `watch_until`, `compile_flow`, `run_flow`, `verify`, `explain` | **M6**    |
 | 6   | **Saved flows**: versioned JSON, `compile` / `run` with no MCP             | **M6+**   |
 | 7   | **MCP**: stdio and Streamable HTTP, `server/discover`, annotations         | **M5**    |
@@ -120,4 +120,4 @@ src/
   cli.ts         process entry: compile, run, MCP, --http
 ```
 
-The product plan is [`mvp.md`](mvp.md). Amendments in [`decisions.md`](decisions.md) win when they conflict.
+Shipped surface is this document plus [`usage.md`](usage.md) and [`ci.md`](ci.md). [`mvp.md`](mvp.md) is the original implementer brief. [`decisions.md`](decisions.md) wins when they conflict.
