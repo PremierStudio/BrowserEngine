@@ -9,10 +9,20 @@
   },
   "include": ["src/**/*.ts"],
   "exclude": [
+    "src/extension/attachGate.ts",
     "src/extension/background.ts",
-    "src/extension/popup.ts",
-    "src/extension/panel.ts",
+    "src/extension/cockpit.ts",
+    "src/extension/hudOverlay.ts",
+    "src/extension/hudState.ts",
+    "src/extension/hudTitle.ts",
+    "src/extension/nativeBridge.ts",
+    "src/extension/nativeFraming.ts",
+    "src/extension/nativeHost.ts",
+    "src/extension/nativePort.ts",
     "src/extension/options.ts",
-    "src/extension/nativeHost.ts"
+    "src/extension/panel.ts",
+    "src/extension/popup.ts",
+    "src/extension/session.ts",
+    "src/extension/settings.ts"
   ]
 }

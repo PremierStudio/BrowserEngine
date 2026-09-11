@@ -1,5 +1,3 @@
-import type { HudEvent } from './hudSignals.js'
-
 /** Whether the HUD shows control, a pause, or nothing. */
 export type HudState = 'active' | 'paused' | 'off'
 
@@ -37,9 +35,4 @@ export function pillText(state: HudState): string {
     return ''
   }
   return 'BrowserEngine is controlling this tab — Ctrl+Shift+U to pause'
-}
-
-/** Runtime.evaluate source that forwards one HUD event to the injected overlay. */
-export function hudEventExpression(event: HudEvent): string {
-  return `window.__browserEngineHud && window.__browserEngineHud.handle(${JSON.stringify(event)})`
 }

@@ -53,15 +53,19 @@ cockpit; Allow adds it. Kill (`Ctrl+Shift+U`) pauses attach/CDP.
 
 When the engine attaches, the extension makes it obvious:
 
-- the controlled tab is grouped under a colored **BrowserEngine** tab group,
-  its title gains a `● ` marker, and the toolbar shows a per-tab `ON` badge
-  (amber `||` when paused);
-- the page gets a viewport frame, a "BrowserEngine is controlling this tab"
-  pill, and an action cursor with click ripples and typing hints;
+- the controlled tab is grouped under a colored **BrowserEngine** tab group
+  (only if it was not already in your own group), its title gains a `● ` marker
+  that survives navigation, and the toolbar shows a per-tab `ON` badge (amber
+  `||` when paused);
+- the page gets a hairline viewport frame and a "BrowserEngine is controlling
+  this tab" pill, and each action draws the agent's cursor, click ripples, and
+  typing hints in the page;
 - everything is removed on detach, pause, kill switch, or tab close.
 
-Turn the in-page overlay off (the tab group and badge stay) with **Control HUD**
-in the options page.
+Turn the in-page frame and pill off (the tab group, title, and badge stay) with
+**Control HUD** in the options page. Only one engine can own the browser bridge
+at a time; starting a second one is refused with a message telling you to stop
+the first.
 
 MCP tools: `extension_status`, `extension_get_settings`,
 `extension_set_settings`, `extension_allow_origin`, `extension_deny_origin`.

@@ -1,5 +1,4 @@
-import { badgeSpec, groupSpec, hudEventExpression, type HudState } from './hudState.js'
-import { signalFromCdp } from './hudSignals.js'
+import { badgeSpec, groupSpec, type HudState } from './hudState.js'
 import { titleMarkExpression, titleUnmarkExpression } from './hudTitle.js'
 import { bindNativePort, takeLastError } from './nativePort.js'
 import {
@@ -139,6 +138,7 @@ let controlledTabId: number | undefined
 let controlledGroupId: number | undefined
 let hudInstalled = false
 let hudScriptId: string | undefined
+let titleScriptId: string | undefined
 let hudSource: string | undefined
 
 function readTabId(result: unknown): number | undefined {
@@ -201,9 +201,14 @@ async function paintChrome(state: HudState): Promise<void> {
   if (state !== 'off' && chrome.tabGroups !== undefined) {
     try {
       if (controlledGroupId === undefined) {
-        controlledGroupId = await chrome.tabs.group({ tabIds: [tabId] })
+        const current = await chrome.tabs.get(tabId)
+        if (current.groupId === -1) {
+          controlledGroupId = await chrome.tabs.group({ tabIds: [tabId] })
+        }
       }
-      await chrome.tabGroups.update(controlledGroupId, { title: spec.title, color: spec.color })
+      if (controlledGroupId !== undefined) {
+        await chrome.tabGroups.update(controlledGroupId, { title: spec.title, color: spec.color })
+      }
     } catch {
       controlledGroupId = undefined
     }
@@ -216,6 +221,20 @@ async function paintChrome(state: HudState): Promise<void> {
   }
   if (state === 'active') {
     await evaluateInTab(tabId, titleMarkExpression())
+    if (titleScriptId === undefined) {
+      try {
+        const result = await chrome.debugger.sendCommand(
+          { tabId },
+          'Page.addScriptToEvaluateOnNewDocument',
+          { source: titleMarkExpression() },
+        )
+        if (isRecord(result) && typeof result.identifier === 'string') {
+          titleScriptId = result.identifier
+        }
+      } catch {
+        titleScriptId = undefined
+      }
+    }
   }
 }
 
@@ -253,6 +272,7 @@ async function markControlled(tabId: number): Promise<void> {
 
 async function clearControlled(): Promise<void> {
   const tabId = controlledTabId
+  const groupId = controlledGroupId
   controlledTabId = undefined
   controlledGroupId = undefined
   if (tabId === undefined) {
@@ -267,16 +287,28 @@ async function clearControlled(): Promise<void> {
       // Already detached.
     }
   }
+  if (titleScriptId !== undefined) {
+    try {
+      await chrome.debugger.sendCommand({ tabId }, 'Page.removeScriptToEvaluateOnNewDocument', {
+        identifier: titleScriptId,
+      })
+    } catch {
+      // Already detached.
+    }
+  }
   if (hudInstalled) {
     await evaluateInTab(tabId, 'window.__browserEngineHud && window.__browserEngineHud.destroy()')
   }
   hudInstalled = false
   hudScriptId = undefined
+  titleScriptId = undefined
   await evaluateInTab(tabId, titleUnmarkExpression())
-  try {
-    await chrome.tabs.ungroup(tabId)
-  } catch {
-    // Tab closed or grouping unsupported.
+  if (groupId !== undefined) {
+    try {
+      await chrome.tabs.ungroup(tabId)
+    } catch {
+      // Tab closed or grouping unsupported.
+    }
   }
   try {
     await chrome.action.setBadgeText({ tabId, text: '' })
@@ -306,19 +338,6 @@ async function handleControlTraffic(request: SessionRequest, reply: SessionReply
       await setHudState(state)
     }
     return
-  }
-  if (request.method !== 'cdp' || controlledTabId === undefined || hudInstalled === false) {
-    return
-  }
-  const params = request.params
-  if (params === undefined) {
-    return
-  }
-  const method = typeof params.method === 'string' ? params.method : ''
-  const cdpParams = isRecord(params.params) ? params.params : undefined
-  const event = signalFromCdp(method, cdpParams)
-  if (event !== undefined) {
-    await evaluateInTab(controlledTabId, hudEventExpression(event))
   }
 }
 
@@ -406,6 +425,16 @@ async function openCockpit(): Promise<void> {
     await chrome.tabs.create({ url: chrome.runtime.getURL('panel.html') })
   }
 }
+
+const RECONNECT_ALARM = 'browser-engine-reconnect'
+
+chrome.alarms.create(RECONNECT_ALARM, { periodInMinutes: 0.5 })
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === RECONNECT_ALARM && nativePort === null) {
+    connectNative()
+  }
+})
 
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== 'cockpit') {

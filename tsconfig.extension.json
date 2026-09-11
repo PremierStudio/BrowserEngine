@@ -19,7 +19,6 @@
     "src/extension/nativeFraming.ts",
     "src/extension/nativeBridge.ts",
     "src/extension/nativeHost.ts",
-    "src/extension/hudSignals.ts",
     "src/extension/hudTitle.ts",
     "src/extension/hudState.ts",
     "src/extension/hudOverlay.ts",

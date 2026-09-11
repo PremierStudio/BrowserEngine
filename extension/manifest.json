@@ -12,7 +12,8 @@
     "storage",
     "sidePanel",
     "commands",
-    "tabGroups"
+    "tabGroups",
+    "alarms"
   ],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {

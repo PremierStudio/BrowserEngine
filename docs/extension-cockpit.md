@@ -20,13 +20,14 @@ The service worker (`src/extension/background.ts`) is a chrome adapter. MCP
 While attached, the extension makes control obvious:
 
 - per-tab toolbar badge (`ON` green, `||` amber when paused);
-- the controlled tab is grouped under a colored **BrowserEngine** tab group,
-  and its title gains a `● ` marker;
-- the page gets a viewport frame, a state pill, and the action cursor with
-  click ripples and typing hints.
+- the controlled tab is grouped under a colored **BrowserEngine** tab group
+  (only when it was not already in a user group) and its title gains a `● `
+  marker that survives navigation;
+- the page gets a hairline viewport frame and a state pill, and actions draw
+  the agent's cursor with click ripples and typing hints.
 
-All of it is gated by the **Control HUD** setting (default on) and is removed
-on detach, pause, disconnect, or tab close.
+The `showHud` setting (default on) gates the in-page frame and pill; everything
+is removed on detach, pause, disconnect, or tab close.
 
 ## Install
 

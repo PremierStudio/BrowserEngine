@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process'
+import net from 'node:net'
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -40,7 +41,7 @@ import { buildCliMain, buildHttpHandler, runInstallNativeHost } from './protocol
 import { executeFlowCli, parseCliCommand } from './protocol/flowCli.js'
 import { writeOutputFile } from './protocol/writeOutputFile.js'
 import { isHttpArg, listenHttp } from './protocol/httpListen.js'
-import { listenExtensionSocket } from './extension/listen.js'
+import { defaultExtensionSocketPath, listenExtensionSocket } from './extension/listen.js'
 import { createExtensionTabHost, openExtensionContextPage } from './extension/openSession.js'
 import { buildExtensionTools } from './extension/settingsTools.js'
 
@@ -247,7 +248,29 @@ process.on('exit', () => {
   desk.markClosed()
 })
 
+async function socketHasListener(sockPath: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect(sockPath)
+    const finish = (live: boolean): void => {
+      socket.removeAllListeners()
+      socket.destroy()
+      resolve(live)
+    }
+    socket.once('connect', () => finish(true))
+    socket.once('error', () => finish(false))
+    setTimeout(() => finish(false), 300)
+  })
+}
+
 if (resolveBrowserOpenMode(process.env, process.argv).kind === 'extension') {
+  const sockPath = defaultExtensionSocketPath()
+  if (await socketHasListener(sockPath)) {
+    process.stderr.write(
+      `browser-engine: another engine already owns ${sockPath}.\n` +
+        'Stop the other BrowserEngine process, then start this one again.\n',
+    )
+    process.exit(1)
+  }
   live.ext = listenExtensionSocket()
 }
 
