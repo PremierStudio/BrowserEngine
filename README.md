@@ -55,7 +55,7 @@ That is what this repo is for: author with an agent, keep a file, replay without
 | **Headed** (default) | Authoring and demos             | Visible Chrome, cursor HUD, paced typing           |
 | **Headless**         | CI and background               | `BROWSER_ENGINE_HEADED=0`                          |
 | **Attach**           | Drive an already-running Chrome | `BROWSER_ENGINE_CDP_URL=http://127.0.0.1:9222`     |
-| **Extension**        | Drive your own Brave profile    | `BROWSER_ENGINE_BACKEND=extension` (see below)     |
+| **Extension**        | Drive your own browser profile  | `BROWSER_ENGINE_BACKEND=extension` (see below)     |
 | **MCP stdio**        | A live agent in this process    | `npm start`                                        |
 | **MCP HTTP**         | A remote agent                  | `npm start -- --http`                              |
 | **CLI compile**      | Check a flow file, no Chrome    | `node dist/cli.js compile path.json`               |
@@ -64,7 +64,7 @@ That is what this repo is for: author with an agent, keep a file, replay without
 
 Pace, type delay, expect timeout, and the work-area snap are all env-configurable. See [usage](docs/usage.md).
 
-**Extension** mode skips the second browser entirely: an unpacked MV3 extension drives your signed-in Brave profile over a native-messaging bridge, with a side-panel cockpit, origin allow-list, and a kill switch. Build it with `npm run build:extension`, then follow [`extension/README.md`](extension/README.md).
+**Extension** mode skips the second browser entirely: an unpacked MV3 extension drives your signed-in browser profile over a native-messaging bridge, with a side-panel cockpit, origin allow-list, and a kill switch. Build it with `npm run build:extension`, then follow [`extension/README.md`](extension/README.md).
 
 ---
 
@@ -140,15 +140,15 @@ Author with `run_flow` until every bind is unique, write the JSON (no uids), the
 
 ## Docs
 
-| Doc                                    | What is in it                                            |
-| -------------------------------------- | -------------------------------------------------------- |
-| [Usage](docs/usage.md)                 | MCP, desk/page/intent tools, env, public-site demos      |
-| [Install](docs/install.md)             | npm package and MCP client setup                         |
-| [Extension](docs/extension-cockpit.md) | Brave side-panel cockpit, native host, origin allow-list |
-| [CI](docs/ci.md)                       | `compile` / `run` on GitHub, GitLab, Forgejo, Bitbucket  |
-| [Architecture](docs/architecture.md)   | Engine, clients, page model, what is not in this repo    |
-| [Engineering](docs/engineering.md)     | `npm run ci`, 100/100 gates, stack                       |
-| [decisions.md](docs/decisions.md)      | Settled engineering decisions                            |
+| Doc                                    | What is in it                                           |
+| -------------------------------------- | ------------------------------------------------------- |
+| [Usage](docs/usage.md)                 | MCP, desk/page/intent tools, env, public-site demos     |
+| [Install](docs/install.md)             | npm package and MCP client setup                        |
+| [Extension](docs/extension-cockpit.md) | Side-panel cockpit, native host, origin allow-list      |
+| [CI](docs/ci.md)                       | `compile` / `run` on GitHub, GitLab, Forgejo, Bitbucket |
+| [Architecture](docs/architecture.md)   | Engine, clients, page model, what is not in this repo   |
+| [Engineering](docs/engineering.md)     | `npm run ci`, 100/100 gates, stack                      |
+| [decisions.md](docs/decisions.md)      | Settled engineering decisions                           |
 
 ---
 

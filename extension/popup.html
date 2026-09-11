@@ -2,31 +2,64 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="color-scheme" content="dark light" />
     <title>BrowserEngine</title>
     <link rel="stylesheet" href="ui.css" />
+    <link rel="stylesheet" href="popup.css" />
   </head>
   <body class="popup">
-    <div class="wrap">
+    <div class="app">
       <header class="top">
         <div class="brand">
-          <div class="mark">BE</div>
+          <div class="mark" aria-hidden="true">BE</div>
           <div class="brand-copy">
             <strong>BROWSERENGINE</strong>
-            <span id="line">Checking…</span>
+            <span id="line" role="status" aria-live="polite">Checking…</span>
           </div>
         </div>
+        <span class="pill" id="statePill">
+          <span class="dot" id="stateDot" aria-hidden="true"></span>
+          <span id="stateText">…</span>
+        </span>
       </header>
-      <div class="popup-stats">
-        <div class="stat"><span>Host</span><b id="host">…</b></div>
-        <div class="stat"><span>Engine</span><b id="engine">…</b></div>
-        <div class="stat"><span>Attach</span><b id="attach">…</b></div>
-      </div>
-      <div class="actions" style="padding: 12px 16px 14px">
-        <button class="btn primary" id="open" type="button">Open cockpit</button>
-        <button class="btn danger" id="kill" type="button">Pause</button>
-        <button class="btn" id="resume" type="button" hidden>Resume</button>
-        <button class="btn" id="options" type="button">Settings</button>
-      </div>
+      <main class="content">
+        <section class="stats" aria-label="Connection status">
+          <div class="stat">
+            <span>Host</span>
+            <b>
+              <span class="dot" id="hostDot" aria-hidden="true"></span>
+              <span id="host">…</span>
+            </b>
+          </div>
+          <div class="stat">
+            <span>Engine</span>
+            <b>
+              <span class="dot" id="engineDot" aria-hidden="true"></span>
+              <span id="engine">…</span>
+            </b>
+          </div>
+          <div class="stat">
+            <span>Attach</span>
+            <b>
+              <span class="dot" id="attachDot" aria-hidden="true"></span>
+              <span id="attach">…</span>
+            </b>
+          </div>
+        </section>
+        <div class="stack">
+          <button class="btn primary block" id="open" type="button">Open cockpit</button>
+          <div class="actions">
+            <button class="btn danger" id="kill" type="button">Pause</button>
+            <button class="btn" id="resume" type="button" hidden>Resume</button>
+            <button class="btn ghost" id="options" type="button">Settings</button>
+          </div>
+        </div>
+        <p class="hint">
+          <span class="kbd">Ctrl+Shift+E</span><span>cockpit</span>
+          <span aria-hidden="true">·</span>
+          <span class="kbd">Ctrl+Shift+U</span><span>pause</span>
+        </p>
+      </main>
     </div>
     <script type="module" src="popup.js"></script>
   </body>

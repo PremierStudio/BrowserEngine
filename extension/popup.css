@@ -1,0 +1,64 @@
+/* ==========================================================================
+   Popup — compact 360px operator surface.
+   Loaded after ui.css; layout only, all colors/space/type come from tokens.
+   ========================================================================== */
+
+.popup {
+  width: 360px;
+}
+
+/* ui.css gives .app min-height: 100vh, which would stretch the popup. */
+.popup .app {
+  min-height: 0;
+}
+
+/* .btn sets display: inline-flex, which beats the UA [hidden] rule. */
+.popup [hidden] {
+  display: none;
+}
+
+.popup .pill {
+  flex: none;
+  white-space: nowrap;
+}
+
+.popup .content {
+  padding: var(--s-4);
+  gap: var(--s-3);
+}
+
+.popup .stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.popup .stat {
+  padding: var(--s-2) var(--s-3);
+}
+
+.popup .stat b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-md);
+  line-height: 1.35;
+}
+
+.popup .stat b > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Pause/Resume and Settings split the row evenly. */
+.popup .actions .btn {
+  flex: 1;
+}
+
+.popup .hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  color: var(--faint);
+  font-size: var(--fs-xs);
+}

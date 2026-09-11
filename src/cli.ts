@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { serveStdio } from '@modelcontextprotocol/server/stdio'
 import puppeteer from 'puppeteer'
 import { exposeFunctionFromUnknown, toPageLikeFromUnknown } from './browser/adaptPage.js'
@@ -34,7 +36,7 @@ import { createDeferredEventSource } from './events/deferredSource.js'
 import { runFlowToolOptions } from './intent/runFlow.js'
 import { runFlowFile } from './intent/runFlowFile.js'
 import { defaultClock, defaultSleep } from './intent/watchUntil.js'
-import { buildCliMain, buildHttpHandler } from './protocol/cli.js'
+import { buildCliMain, buildHttpHandler, runInstallNativeHost } from './protocol/cli.js'
 import { executeFlowCli, parseCliCommand } from './protocol/flowCli.js'
 import { writeOutputFile } from './protocol/writeOutputFile.js'
 import { isHttpArg, listenHttp } from './protocol/httpListen.js'
@@ -257,6 +259,31 @@ const options = {
 }
 
 const command = parseCliCommand(process.argv)
+if (command.kind === 'install-native-host') {
+  const result = runInstallNativeHost(
+    {
+      platform: process.platform,
+      home: homedir(),
+      env: process.env,
+      // A global install keeps `extension/` next to `dist/cli.js`, so the
+      // package root is one level up from this compiled module.
+      extensionRoot: fileURLToPath(new URL('../extension', import.meta.url)),
+      exists: existsSync,
+      mkdirSync,
+      writeFileSync,
+      chmodSync,
+      execFileSync,
+      log: (line) => {
+        process.stderr.write(`${line}\n`)
+      },
+    },
+    command.all,
+  )
+  for (const line of result.lines) {
+    process.stdout.write(`${line}\n`)
+  }
+  process.exit(result.code)
+}
 if (command.kind === 'compile' || command.kind === 'run' || command.kind === 'usage') {
   const code = await executeFlowCli(command, {
     readFile: (path) => readFileSync(path, 'utf8'),

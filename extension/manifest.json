@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "BrowserEngine",
   "version": "0.3.0",
-  "description": "Drive this Brave profile from Grok / BrowserEngine. Cockpit, settings, origin allow-list.",
+  "description": "Drive this browser from an agent. Cockpit, settings, origin allow-list.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnfeLb64ljausOi1k0Pc0tss2W2TJe2w2z/bF3TTAvQBNa0atPpTdQqXNpmsJPWjgkYKxMNaSvuKEhDOOkr/ssPomtONTuyONuFwpRiK5WzMvAb7CGqlvdnPSHNv9CqI2FtMAQApyabfvOcmUT2t1E5o/OLTf90OHEPVFnDU/YI3Uggzdxz3EA7CSnl3Vn+cIyPB5sIB8Pepo42zelk4xuDHbDI9Tz5k0AhdRpSLsQaqb6ItbcRqlOAjiyw8MYoGnpsBy7xh2DXNnXoPlcsbcFcYxtNhhVsHiLga1z79eJqKQDeCbMc7hiERNDX35yrTBUodLmTq39KvtLxevUmWeZwIDAQAB",
   "permissions": [
     "debugger",

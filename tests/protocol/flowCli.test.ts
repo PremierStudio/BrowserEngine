@@ -149,64 +149,110 @@ describe('parseCliCommand', () => {
   it('refuses a flag without its path or an unknown flag', () => {
     expect(parseCliCommand(['node', 'cli.js', 'run', '--report'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'run', '--junit', '--json', 'a.json'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'run', '--pretty', 'a.json'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'run', '--pretty'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'run', '--report', '--json', 'a.json'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'compile', '--report', '', 'flows/a.json'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'run', '--json'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'compile', '--report', ''])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     const sparse: string[] = ['node', 'cli.js', 'run']
     sparse[4] = 'flows/a.json'
     expect(parseCliCommand(sparse)).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
   })
 
   it('refuses a missing path or leftover args', () => {
     expect(parseCliCommand(['node', 'cli.js', 'run'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'compile'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'run', 'a.json', 'extra'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'wat'])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
     expect(parseCliCommand(['node', 'cli.js', 'run', ''])).toEqual({
       kind: 'usage',
-      error: 'usage: browser-engine run <file.json> | compile <file.json> | --http',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
+    })
+  })
+
+  it('parses install-native-host with or without --all', () => {
+    expect(parseCliCommand(['node', 'cli.js', 'install-native-host'])).toEqual({
+      kind: 'install-native-host',
+      all: false,
+    })
+    expect(parseCliCommand(['node', 'cli.js', 'install-native-host', '--all'])).toEqual({
+      kind: 'install-native-host',
+      all: true,
+    })
+  })
+
+  it('refuses unknown install-native-host arguments', () => {
+    expect(parseCliCommand(['node', 'cli.js', 'install-native-host', 'extra'])).toEqual({
+      kind: 'usage',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
+    })
+    expect(parseCliCommand(['node', 'cli.js', 'install-native-host', '--all', '--http'])).toEqual({
+      kind: 'usage',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
+    })
+  })
+
+  it('keeps --help on the usage path', () => {
+    expect(parseCliCommand(['node', 'cli.js', '--help'])).toEqual({
+      kind: 'usage',
+      error:
+        'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
     })
   })
 })
@@ -378,7 +424,9 @@ describe('executeFlowCli', () => {
         },
       ),
     ).toBe(1)
-    expect(errors).toEqual(['usage: browser-engine run <file.json> | compile <file.json> | --http'])
+    expect(errors).toEqual([
+      'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
+    ])
   })
 
   it('does not run http through the file command', async () => {
@@ -397,7 +445,9 @@ describe('executeFlowCli', () => {
         },
       ),
     ).toBe(1)
-    expect(errors).toEqual(['usage: browser-engine run <file.json> | compile <file.json> | --http'])
+    expect(errors).toEqual([
+      'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http',
+    ])
   })
 
   it('prints usage and returns 1', async () => {

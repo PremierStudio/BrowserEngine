@@ -29,6 +29,19 @@ type FieldGroup = {
   fields: SettingsField[]
 }
 
+type StatusTone = 'ok' | 'warn' | 'danger'
+
+/** Short product copy per settings group, keyed by the group name from SETTINGS_FIELDS. */
+const GROUP_BLURBS = new Map<string, string>([
+  ['Safety', 'Attach policy, the origin allow-list, and the global kill switch.'],
+  ['Session', 'How the engine attaches to tabs and talks to the native host.'],
+  ['Observe & flow', 'What an observe snapshot includes, and how scripted flows are paced.'],
+  ['Window', 'Headed window geometry, viewport defaults, and the CDP endpoint.'],
+  ['Host', 'Native host logging and the toolbar badge.'],
+])
+
+const NARROW_VIEWPORT = window.matchMedia('(max-width: 760px)')
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && Array.isArray(value) === false
 }
@@ -178,35 +191,175 @@ function settingsValues(settings: unknown): Record<string, unknown> {
 
 const form = elementById('form')
 const status = elementById('status')
+const nav = elementById('nav')
 const controls = new Map<keyof EngineSettings, FormControl>()
+const sections = new Map<string, HTMLElement>()
+const navItems: HTMLButtonElement[] = []
+
+function setStatus(message: string, tone: StatusTone): void {
+  status.textContent = message
+  status.classList.remove('ok', 'warn', 'danger')
+  status.classList.add(tone)
+}
+
+function activeOffset(): number {
+  return NARROW_VIEWPORT.matches ? 150 : 120
+}
+
+/** Group whose section top has most recently passed the sticky header stack. */
+function sectionAtViewportTop(): string | undefined {
+  let active: string | undefined
+  for (const [name, section] of sections) {
+    if (section.getBoundingClientRect().top <= activeOffset()) {
+      active = name
+    }
+  }
+  return active
+}
+
+function setActiveGroup(name: string | undefined): void {
+  for (const item of navItems) {
+    item.classList.toggle('active', item.dataset.group === name)
+  }
+}
+
+window.addEventListener(
+  'scroll',
+  () => {
+    setActiveGroup(sectionAtViewportTop())
+  },
+  { passive: true },
+)
+
+function paintNav(groups: readonly FieldGroup[]): void {
+  nav.replaceChildren()
+  navItems.length = 0
+  const title = document.createElement('p')
+  title.className = 'options-nav-title'
+  title.textContent = 'On this page'
+  nav.append(title)
+  for (const group of groups) {
+    const item = document.createElement('button')
+    item.type = 'button'
+    item.className = 'tab options-nav-item'
+    item.dataset.group = group.name
+    item.textContent = group.name
+    item.addEventListener('click', () => {
+      setActiveGroup(group.name)
+      const section = sections.get(group.name)
+      if (section !== undefined) {
+        section.scrollIntoView({ block: 'start' })
+      }
+    })
+    navItems.push(item)
+    nav.append(item)
+  }
+}
+
+/** Give each control its ui.css surface plus a stable id/data-key. */
+function styleControl(field: SettingsField, control: FormControl): HTMLElement {
+  const element = controlElement(control)
+  element.id = `field-${field.key}`
+  element.dataset.key = field.key
+  if (control.kind === 'enum') {
+    element.className = 'select'
+  } else if (control.kind === 'origins') {
+    element.className = 'textarea'
+  } else if (control.kind !== 'boolean') {
+    element.className = 'input'
+  }
+  return element
+}
+
+/** One field row: switches use .switch markup, everything else a label + control. */
+function fieldNode(
+  field: SettingsField,
+  value: unknown,
+): { node: HTMLElement; control: FormControl } {
+  const control = controlFor(field, value)
+  const element = styleControl(field, control)
+  const wrap = document.createElement('div')
+  wrap.className = 'field options-field'
+  if (field.kind === 'origins') {
+    wrap.classList.add('options-field-wide')
+  }
+  const hint = document.createElement('code')
+  hint.className = 'options-key'
+  hint.textContent = field.key
+  hint.title = field.key
+  if (control.kind === 'boolean') {
+    const row = document.createElement('div')
+    row.className = 'options-switch-row'
+    const label = document.createElement('label')
+    label.className = 'switch'
+    const track = document.createElement('span')
+    track.className = 'track'
+    const caption = document.createElement('span')
+    caption.className = 'switch-label'
+    caption.textContent = field.label
+    label.append(element, track, caption)
+    row.append(label, hint)
+    wrap.append(row)
+  } else {
+    const head = document.createElement('div')
+    head.className = 'options-field-head'
+    const label = document.createElement('label')
+    label.className = 'field-label'
+    label.htmlFor = element.id
+    label.textContent = field.label
+    head.append(label, hint)
+    wrap.append(head, element)
+  }
+  const help = document.createElement('p')
+  help.className = 'help'
+  help.textContent = field.help
+  wrap.append(help)
+  return { node: wrap, control }
+}
 
 function paint(settings: unknown): void {
+  const previous = sectionAtViewportTop()
   form.replaceChildren()
   controls.clear()
+  sections.clear()
   const values = settingsValues(settings)
-  for (const group of groupedFields()) {
+  const groups = groupedFields()
+  for (const [index, group] of groups.entries()) {
     const section = document.createElement('section')
-    section.className = 'group'
-    const heading = document.createElement('h2')
-    heading.textContent = group.name
-    section.append(heading)
-    for (const field of group.fields) {
-      const wrap = document.createElement('div')
-      wrap.className = 'field'
-      const label = document.createElement('label')
-      label.textContent = field.label
-      const help = document.createElement('div')
-      help.className = 'help'
-      help.textContent = field.help
-      const control = controlFor(field, values[field.key])
-      const element = controlElement(control)
-      element.dataset.key = field.key
-      controls.set(field.key, control)
-      wrap.append(label, element, help)
-      section.append(wrap)
+    section.className = 'card options-group'
+    section.id = `options-group-${String(index)}`
+    const head = document.createElement('div')
+    head.className = 'card-head'
+    const title = document.createElement('h3')
+    title.textContent = group.name
+    const count = document.createElement('span')
+    count.className = 'count'
+    count.textContent = `${String(group.fields.length)} fields`
+    head.append(title, count)
+    const body = document.createElement('div')
+    body.className = 'card-body'
+    const blurb = GROUP_BLURBS.get(group.name)
+    if (blurb !== undefined) {
+      const description = document.createElement('p')
+      description.className = 'options-group-desc'
+      description.textContent = blurb
+      body.append(description)
     }
+    const grid = document.createElement('div')
+    grid.className = 'options-fields'
+    for (const field of group.fields) {
+      const { node, control } = fieldNode(field, values[field.key])
+      controls.set(field.key, control)
+      grid.append(node)
+    }
+    body.append(grid)
+    section.append(head, body)
+    sections.set(group.name, section)
     form.append(section)
   }
+  paintNav(groups)
+  const first = groups[0]
+  setActiveGroup(previous !== undefined && sections.has(previous) ? previous : first?.name)
 }
 
 function collect(): Record<string, unknown> {
@@ -223,28 +376,30 @@ function collect(): Record<string, unknown> {
 async function load(): Promise<void> {
   const payload = await command('settings', { op: 'get' })
   if (payload.reply.ok !== true) {
-    status.textContent = payload.reply.error ?? 'Could not load settings'
+    setStatus(payload.reply.error ?? 'Could not load settings', 'danger')
     return
   }
   paint(payload.reply.result)
-  status.textContent = 'Loaded from this Brave profile.'
+  setStatus('Loaded from this browser profile.', 'ok')
 }
 
 elementById('save').addEventListener('click', async () => {
   const payload = await command('settings', { op: 'set', patch: collect() })
-  status.textContent = payload.reply.ok ? 'Saved.' : (payload.reply.error ?? 'Save failed')
   if (payload.reply.ok) {
     paint(payload.reply.result)
+    setStatus('Saved.', 'ok')
+  } else {
+    setStatus(payload.reply.error ?? 'Save failed', 'danger')
   }
 })
 
 elementById('reset').addEventListener('click', async () => {
   const payload = await command('settings', { op: 'reset' })
-  status.textContent = payload.reply.ok
-    ? 'Defaults restored.'
-    : (payload.reply.error ?? 'Reset failed')
   if (payload.reply.ok) {
     paint(payload.reply.result)
+    setStatus('Defaults restored.', 'ok')
+  } else {
+    setStatus(payload.reply.error ?? 'Reset failed', 'danger')
   }
 })
 
@@ -256,7 +411,7 @@ elementById('export').addEventListener('click', () => {
   a.download = 'browser-engine-settings.json'
   a.click()
   URL.revokeObjectURL(url)
-  status.textContent = 'Exported current form values.'
+  setStatus('Exported current form values.', 'ok')
 })
 
 elementById('import').addEventListener('click', () => {
@@ -274,9 +429,9 @@ inputById('importFile').addEventListener('change', async (event) => {
   try {
     const parsed: unknown = JSON.parse(await file.text())
     paint(parsed)
-    status.textContent = 'Imported. Click Save to persist.'
+    setStatus('Imported. Click Save to persist.', 'warn')
   } catch (error) {
-    status.textContent = error instanceof Error ? error.message : 'Import failed'
+    setStatus(error instanceof Error ? error.message : 'Import failed', 'danger')
   }
 })
 

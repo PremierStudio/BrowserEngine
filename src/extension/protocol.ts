@@ -1,4 +1,4 @@
-/** Methods the unpacked Brave extension understands. */
+/** Methods the unpacked extension understands. */
 export type ExtensionMethod =
   | 'ping'
   | 'tabs'

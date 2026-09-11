@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/server'
 import type { StdioServerHandle } from '@modelcontextprotocol/server/stdio'
 import { buildIntentTools } from '../intent/intentTools.js'
+import { formatInstallSummary, installNativeHost, type InstallDeps } from '../nativeHost/install.js'
 import { createRuntime, type RuntimeOptions } from '../session/runtime.js'
 import { buildBrowserDeskTools } from '../tools/browserDeskTools.js'
 import type { ToolDefinition } from '../tools/types.js'
@@ -61,4 +62,19 @@ export function buildCliMain(serve: Serve, options: DefaultServerOptions = {}): 
 /** Builds the Streamable HTTP handler around the default server factory. */
 export function buildHttpHandler(options: DefaultServerOptions = {}) {
   return createHttpHandler(() => createDefaultServer(options))
+}
+
+/**
+ * Installs the native-messaging host with the given deps and returns the
+ * process exit code plus the human summary lines the CLI prints.
+ */
+export function runInstallNativeHost(
+  deps: InstallDeps,
+  all: boolean,
+): { code: number; lines: string[] } {
+  const summary = installNativeHost(deps, { all })
+  return {
+    code: summary.failed.length > 0 ? 1 : 0,
+    lines: formatInstallSummary(summary),
+  }
 }

@@ -4,8 +4,10 @@ import {
   buildCliMain,
   buildHttpHandler,
   createDefaultServer,
+  runInstallNativeHost,
   type Serve,
 } from '../../src/protocol/cli.js'
+import type { InstallDeps } from '../../src/nativeHost/install.js'
 import { STDIO_LINE_BUDGET } from '../../src/protocol/tools.js'
 import { createLazyContextPage } from '../../src/context/lazyPage.js'
 import type { ContextPage } from '../../src/context/ContextPage.js'
@@ -373,5 +375,64 @@ describe('buildHttpHandler', () => {
     expect(response.status).toBe(200)
     const body = await response.text()
     expect(serverInfoFromSse(body)).toEqual({ name: 'browser-engine', version: '0.0.1' })
+  })
+})
+
+describe('runInstallNativeHost', () => {
+  function installDeps(overrides: Partial<InstallDeps> = {}): InstallDeps {
+    return {
+      platform: 'linux',
+      home: '/home/tester',
+      env: {},
+      extensionRoot: '/pkg/extension',
+      exists: () => false,
+      mkdirSync: () => undefined,
+      writeFileSync: () => undefined,
+      chmodSync: () => undefined,
+      execFileSync: () => undefined,
+      log: () => undefined,
+      ...overrides,
+    }
+  }
+
+  it('returns zero and the formatted summary when no target fails', () => {
+    const result = runInstallNativeHost(
+      installDeps({ exists: (path) => path === '/home/tester/.config/vivaldi' }),
+      false,
+    )
+    expect(result).toEqual({
+      code: 0,
+      lines: [
+        'installed: Vivaldi',
+        'skipped: Google Chrome, Google Chrome Beta, Google Chrome Unstable, Chromium, Brave, Microsoft Edge, Microsoft Edge Beta, Opera',
+        'failed: none',
+        'native host: /pkg/extension/native/host.sh',
+        'extension id: pofhkiebdcchdedejdniobgfgakllkij',
+        'Load unpacked in chrome://extensions (Developer mode)',
+      ],
+    })
+  })
+
+  it('passes --all through to every known target', () => {
+    const result = runInstallNativeHost(installDeps(), true)
+    expect(result.code).toBe(0)
+    expect(result.lines[0]).toBe(
+      'installed: Google Chrome, Google Chrome Beta, Google Chrome Unstable, Chromium, Brave, Microsoft Edge, Microsoft Edge Beta, Vivaldi, Opera',
+    )
+    expect(result.lines[1]).toBe('skipped: none')
+  })
+
+  it('returns one when a target fails', () => {
+    const result = runInstallNativeHost(
+      installDeps({
+        exists: (path) => path === '/home/tester/.config/vivaldi',
+        mkdirSync: () => {
+          throw new Error('denied')
+        },
+      }),
+      false,
+    )
+    expect(result.code).toBe(1)
+    expect(result.lines[2]).toBe('failed: Vivaldi')
   })
 })

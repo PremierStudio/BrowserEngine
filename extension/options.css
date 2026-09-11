@@ -1,0 +1,240 @@
+/* ==========================================================================
+   BrowserEngine options — page layout
+   Loaded after ui.css. Uses its tokens and components; adds page chrome only.
+   ========================================================================== */
+
+:root {
+  --options-top-h: 59px;
+  --options-anchor: calc(var(--options-top-h) + var(--s-5));
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* --------------------------------------------------------------------------
+   Sticky top bar
+   -------------------------------------------------------------------------- */
+
+.options-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: var(--options-top-h);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.options-status {
+  flex: none;
+  max-width: min(460px, 42vw);
+  padding: 4px 12px;
+  border-radius: var(--r-full);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --------------------------------------------------------------------------
+   Body: sidebar nav + content
+   -------------------------------------------------------------------------- */
+
+.options-body {
+  width: 100%;
+  max-width: 1240px;
+  margin-inline: auto;
+  align-items: flex-start;
+}
+
+.options-nav {
+  position: sticky;
+  top: var(--options-top-h);
+  z-index: 20;
+  flex: 0 0 224px;
+  width: 224px;
+  max-height: calc(100vh - var(--options-top-h));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-5) var(--s-3) var(--s-6);
+  border-right: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2) 45%, transparent);
+}
+
+.options-nav-title {
+  padding: 0 var(--s-2) var(--s-2);
+  color: var(--faint);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.options-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  text-align: left;
+}
+
+.options-nav-item::before {
+  content: '';
+  flex: none;
+  width: 3px;
+  height: 14px;
+  border-radius: var(--r-full);
+  background: transparent;
+  transition: background var(--speed);
+}
+
+.options-nav-item.active {
+  background: var(--accent-dim);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.options-nav-item.active::before {
+  background: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+   Content cards
+   -------------------------------------------------------------------------- */
+
+.options-content {
+  padding: var(--s-6) var(--s-6) calc(var(--s-8) + 48px);
+}
+
+.options-group {
+  scroll-margin-top: var(--options-anchor);
+}
+
+.options-group-desc {
+  max-width: 70ch;
+  margin-bottom: var(--s-4);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.options-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s-4) var(--s-5);
+}
+
+.options-field-wide {
+  grid-column: 1 / -1;
+}
+
+.options-field-head,
+.options-switch-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.options-switch-row {
+  align-items: center;
+  min-height: 24px;
+}
+
+.options-key {
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.options-field .switch-label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.options-field input[type='number'] {
+  max-width: 200px;
+}
+
+/* --------------------------------------------------------------------------
+   Sticky save bar
+   -------------------------------------------------------------------------- */
+
+.options-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: var(--s-3) var(--s-4);
+  padding-inline: max(var(--s-4), calc((100vw - 1240px) / 2 + var(--s-4)));
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px color-mix(in srgb, var(--bg) 65%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+/* --------------------------------------------------------------------------
+   Narrow screens: sidebar becomes a horizontal scroller under the top bar
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  :root {
+    --options-anchor: calc(var(--options-top-h) + 66px);
+  }
+
+  .options-body {
+    flex-direction: column;
+    max-width: none;
+  }
+
+  .options-nav {
+    top: var(--options-top-h);
+    z-index: 25;
+    flex: none;
+    flex-direction: row;
+    width: 100%;
+    max-height: none;
+    gap: var(--s-1);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: var(--s-2) var(--s-3);
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 92%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .options-nav-title {
+    display: none;
+  }
+
+  .options-nav-item {
+    width: auto;
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .options-content {
+    padding: var(--s-4) var(--s-4) var(--s-6);
+  }
+
+  .options-status {
+    max-width: 44vw;
+  }
+
+  .options-savebar {
+    padding-inline: var(--s-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

@@ -154,13 +154,13 @@ function render(payload: CommandPayload): void {
   elementById('hostText').textContent = connected ? 'native' : 'down'
   setDot(elementById('hostDot'), connected ? 'on' : 'off')
   elementById('engineText').textContent = engine ? 'socket' : connected ? 'waiting' : '—'
-  setDot(elementById('engineDot'), engine ? 'on' : connected ? 'warn' : 'off')
+  setDot(elementById('engineDot'), engine ? 'on' : connected ? 'warn' : 'idle')
   elementById('attachText').textContent = paused
     ? 'paused'
     : attached === undefined
       ? 'none'
       : `tab ${attached}`
-  setDot(elementById('attachDot'), paused ? 'warn' : attached === undefined ? 'off' : 'on')
+  setDot(elementById('attachDot'), paused ? 'warn' : attached === undefined ? 'idle' : 'on')
   elementById('policy').textContent = String(settings.attachPolicy ?? '—')
   elementById('resume').hidden = !paused
   elementById('kill').hidden = paused
@@ -197,6 +197,7 @@ function render(payload: CommandPayload): void {
     const url = document.createElement('div')
     url.className = 'url'
     url.textContent = tabHost(tab.url || '')
+    url.title = tab.url
     meta.append(title, url)
     const actions = document.createElement('div')
     actions.className = 'row-actions'
@@ -219,6 +220,7 @@ function render(payload: CommandPayload): void {
     close.className = 'btn tiny ghost'
     close.type = 'button'
     close.textContent = '×'
+    close.setAttribute('aria-label', `Close tab ${tab.title || tab.url}`)
     close.addEventListener('click', () => {
       if (
         settings.confirmDestructive &&
@@ -252,17 +254,20 @@ function render(payload: CommandPayload): void {
   for (const origin of allowed) {
     const chip = document.createElement('span')
     chip.className = 'chip'
-    chip.append(origin)
+    chip.title = origin
+    const label = document.createElement('span')
+    label.textContent = origin
     const drop = document.createElement('button')
     drop.type = 'button'
     drop.textContent = '×'
+    drop.setAttribute('aria-label', `Remove origin ${origin}`)
     drop.addEventListener('click', () => {
       void command('settings', {
         op: 'set',
         patch: { allowedOrigins: allowed.filter((item) => item !== origin) },
       }).then(refresh)
     })
-    chip.append(drop)
+    chip.append(label, drop)
     originsEl.append(chip)
   }
 
@@ -277,12 +282,14 @@ function render(payload: CommandPayload): void {
   for (const entry of [...activity].reverse().slice(0, 24)) {
     const line = document.createElement('div')
     const time = document.createElement('span')
+    time.className = 't'
     time.textContent = new Date(entry.t).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
     })
     const method = document.createElement('span')
+    method.className = 'm'
     method.textContent = entry.method
     const ok = document.createElement('span')
     ok.className = entry.ok ? 'good' : 'bad'

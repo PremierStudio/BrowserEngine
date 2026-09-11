@@ -6,7 +6,7 @@ import { createExtensionPageLike } from './extensionPage.js'
 
 type Bridge = ReturnType<typeof createExtensionBridge>
 
-/** Attach the active Brave tab and wrap it as a ContextPage. */
+/** Attach the active browser tab and wrap it as a ContextPage. */
 export async function openExtensionContextPage(bridge: Bridge): Promise<ContextPage> {
   await bridge.request('attach')
   const like = createExtensionPageLike({

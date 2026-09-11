@@ -2,92 +2,147 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>BrowserEngine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BrowserEngine cockpit</title>
     <link rel="stylesheet" href="ui.css" />
+    <link rel="stylesheet" href="panel.css" />
   </head>
-  <body>
-    <div class="wrap">
-      <header class="top">
-        <div class="brand">
-          <div class="mark">BE</div>
-          <div class="brand-copy">
-            <strong>BROWSERENGINE</strong>
-            <span id="subtitle">Cockpit</span>
+  <body class="app">
+    <div class="wrap cockpit">
+      <div class="cockpit-sticky">
+        <header class="top cockpit-top">
+          <div class="brand">
+            <div class="mark" aria-hidden="true">BE</div>
+            <div class="brand-copy">
+              <strong>BROWSERENGINE</strong>
+              <span id="subtitle">Cockpit</span>
+            </div>
           </div>
-        </div>
-        <div class="actions">
-          <button class="btn" id="resume" type="button" hidden>Resume</button>
-          <button class="btn danger" id="kill" type="button">Pause</button>
-          <button class="btn" id="detach" type="button">Detach</button>
-          <button class="btn" id="options" type="button">Settings</button>
-        </div>
-      </header>
-      <section class="rail">
-        <div class="pill">
-          <span class="k">Host</span>
-          <span class="v"><i class="dot" id="hostDot"></i><span id="hostText">…</span></span>
-        </div>
-        <div class="pill">
-          <span class="k">Engine</span>
-          <span class="v"><i class="dot" id="engineDot"></i><span id="engineText">…</span></span>
-        </div>
-        <div class="pill">
-          <span class="k">Attach</span>
-          <span class="v"><i class="dot" id="attachDot"></i><span id="attachText">none</span></span>
-        </div>
-        <div class="pill">
-          <span class="k">Policy</span>
-          <span class="v" id="policy">allowlist</span>
-        </div>
-      </section>
-      <section class="card pending" id="pendingCard" hidden>
-        <div class="card-head"><h2>Attach request</h2></div>
-        <div class="body">
-          <p id="pendingText"></p>
-          <p class="origin" id="pendingOrigin"></p>
-          <div class="actions">
-            <button class="btn primary" id="allow" type="button">Allow origin</button>
-            <button class="btn danger" id="deny" type="button">Deny</button>
+          <div class="actions cockpit-actions">
+            <button class="btn" id="resume" type="button" hidden>Resume</button>
+            <button class="btn danger" id="kill" type="button" title="Pause and detach">
+              Pause
+            </button>
+            <button
+              class="btn ghost icon"
+              id="options"
+              type="button"
+              title="Settings"
+              aria-label="Open settings"
+            >
+              ⚙︎
+            </button>
           </div>
-        </div>
-      </section>
-      <section class="card">
-        <div class="card-head">
-          <h2>Tabs</h2>
-          <span class="kbd" id="tabCount">0</span>
-        </div>
-        <div class="form">
-          <input class="search" id="tabQuery" type="search" placeholder="Filter title or host" />
-          <div class="inline" style="margin-top: 8px">
-            <input class="grow" id="newTabUrl" type="text" placeholder="https:// — new tab" />
-            <button class="btn primary" id="newTab" type="button">Open</button>
+        </header>
+        <section class="status-rail" aria-label="Connection status">
+          <div class="pill status-pill" title="Native host">
+            <span class="dot" id="hostDot" aria-hidden="true"></span>
+            <span class="status-key">Host</span>
+            <span class="status-value" id="hostText">…</span>
           </div>
-        </div>
-        <div id="tabs"></div>
-      </section>
-      <section class="card">
-        <div class="card-head"><h2>Allowed origins</h2></div>
-        <div class="form">
-          <div class="chips" id="origins"></div>
-          <div class="inline" style="margin-top: 10px">
-            <input
-              class="grow"
-              id="originInput"
-              type="text"
-              placeholder="https://example.com or https://*"
-            />
-            <button class="btn" id="addOrigin" type="button">Allow</button>
+          <div class="pill status-pill" title="Engine socket">
+            <span class="dot" id="engineDot" aria-hidden="true"></span>
+            <span class="status-key">Engine</span>
+            <span class="status-value" id="engineText">…</span>
           </div>
-        </div>
-      </section>
-      <section class="card">
-        <div class="card-head"><h2>Activity</h2></div>
-        <div class="log" id="activity"></div>
-      </section>
-      <p class="toast">
-        Grok drives this Brave. New hosts prompt here.
-        <span class="kbd">Ctrl+Shift+E</span> panel <span class="kbd">Ctrl+Shift+U</span> pause
-      </p>
+          <div class="pill status-pill" title="Attached tab">
+            <span class="dot" id="attachDot" aria-hidden="true"></span>
+            <span class="status-key">Attach</span>
+            <span class="status-value" id="attachText">none</span>
+          </div>
+          <div class="pill status-pill" title="Attach policy">
+            <span class="status-key">Policy</span>
+            <span class="status-value" id="policy">—</span>
+          </div>
+          <button class="btn tiny ghost" id="detach" type="button" title="Detach from the tab">
+            Detach
+          </button>
+        </section>
+      </div>
+      <main class="cockpit-body">
+        <section class="card pending" id="pendingCard" hidden aria-labelledby="pendingTitle">
+          <div class="card-head">
+            <h2 id="pendingTitle">Attach request</h2>
+            <span class="pill warn">Needs approval</span>
+          </div>
+          <div class="card-body pending-body">
+            <div class="pending-target">
+              <strong class="tab-title" id="pendingText"></strong>
+              <span class="url" id="pendingOrigin"></span>
+            </div>
+            <div class="actions pending-actions">
+              <button class="btn primary" id="allow" type="button">Allow origin</button>
+              <button class="btn danger" id="deny" type="button">Deny</button>
+            </div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="tabsTitle">
+          <div class="card-head">
+            <h2 id="tabsTitle">Tabs</h2>
+            <span class="count" id="tabCount" title="Visible tabs">0</span>
+          </div>
+          <div class="card-body tight stack">
+            <div class="search">
+              <input
+                class="input"
+                id="tabQuery"
+                type="search"
+                placeholder="Filter title or host"
+                aria-label="Filter tabs"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+            <div class="input-row">
+              <input
+                class="input mono"
+                id="newTabUrl"
+                type="text"
+                placeholder="https:// — open a new tab"
+                aria-label="URL for the new tab"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button class="btn primary" id="newTab" type="button">Open</button>
+            </div>
+            <div class="tab-list" id="tabs"></div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="originsTitle">
+          <div class="card-head">
+            <h2 id="originsTitle">Allowed origins</h2>
+          </div>
+          <div class="card-body stack">
+            <div class="chips" id="origins"></div>
+            <div class="input-row">
+              <input
+                class="input mono"
+                id="originInput"
+                type="text"
+                placeholder="https://example.com or https://*"
+                aria-label="Origin to allow"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button class="btn" id="addOrigin" type="button">Allow</button>
+            </div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="activityTitle">
+          <div class="card-head">
+            <h2 id="activityTitle">Activity</h2>
+          </div>
+          <div class="card-body tight">
+            <div class="activity" id="activity"></div>
+          </div>
+        </section>
+      </main>
+      <footer class="cockpit-foot">
+        <p class="toast">
+          New hosts prompt here <span class="kbd">Ctrl+Shift+E</span> panel
+          <span class="kbd">Ctrl+Shift+U</span> pause
+        </p>
+      </footer>
     </div>
     <script type="module" src="panel.js"></script>
   </body>

@@ -70,13 +70,13 @@ The engine re-observes after click or navigate. A name must bind uniquely or the
 
 Unset or whitespace-only CDP URL keeps today's launch path. A present but invalid value (not `http://` or `https://`) is an error so a typo does not spawn Chrome.
 
-Brave (or Chrome) must already be listening. Example:
+A Chromium browser (Brave, Chrome, Edge, Vivaldi, …) must already be listening. Example:
 
 ```powershell
 & "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\Application\brave.exe" --remote-debugging-port=9222
 ```
 
-Then `BROWSER_ENGINE_CDP_URL=http://127.0.0.1:9222` or `--cdp-url http://127.0.0.1:9222`. `browser_close` in attach mode disconnects the engine only. It does not quit Brave.
+Then `BROWSER_ENGINE_CDP_URL=http://127.0.0.1:9222` or `--cdp-url http://127.0.0.1:9222`. `browser_close` in attach mode disconnects the engine only. It does not quit the browser.
 
 Headed defaults: about 28ms per typed character, about 700ms between `run_flow` steps, live cursor HUD.
 

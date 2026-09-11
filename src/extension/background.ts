@@ -181,6 +181,10 @@ function connectNative(): void {
 }
 
 async function openCockpit(): Promise<void> {
+  if (chrome.sidePanel === undefined) {
+    await chrome.tabs.create({ url: chrome.runtime.getURL('panel.html') })
+    return
+  }
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
   const tab = tabs[0]
   if (tab?.windowId !== undefined) {
@@ -254,7 +258,9 @@ chrome.tabs.onActivated.addListener(() => {
 })
 
 chrome.runtime.onInstalled.addListener(() => {
-  void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false })
+  if (chrome.sidePanel !== undefined) {
+    void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false })
+  }
 })
 
 connectNative()

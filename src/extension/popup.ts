@@ -1,4 +1,4 @@
-import { cockpitHeadline } from './cockpit.js'
+import { cockpitHeadline, type CockpitFlags } from './cockpit.js'
 
 type CommandReply = {
   ok: boolean
@@ -29,6 +29,15 @@ type OpenOptionsMessage = {
   type: 'openOptions'
 }
 
+type DotTone = 'on' | 'warn' | 'off' | 'idle'
+
+type PillTone = 'ok' | 'warn' | 'danger'
+
+type StateSummary = {
+  label: string
+  tone: PillTone
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && Array.isArray(value) === false
 }
@@ -39,6 +48,49 @@ function elementById(id: string): HTMLElement {
     throw new Error(`Missing element #${id}`)
   }
   return element
+}
+
+function setDotTone(id: string, tone: DotTone): void {
+  const dot = elementById(id)
+  dot.classList.toggle('on', tone === 'on')
+  dot.classList.toggle('warn', tone === 'warn')
+  dot.classList.toggle('off', tone === 'off')
+}
+
+function setPillTone(id: string, tone: PillTone): void {
+  const pill = elementById(id)
+  pill.classList.toggle('ok', tone === 'ok')
+  pill.classList.toggle('warn', tone === 'warn')
+  pill.classList.toggle('danger', tone === 'danger')
+}
+
+function dotFor(tone: PillTone): DotTone {
+  if (tone === 'ok') {
+    return 'on'
+  }
+  if (tone === 'warn') {
+    return 'warn'
+  }
+  return 'off'
+}
+
+function summarize(flags: CockpitFlags): StateSummary {
+  if (flags.hostConnected === false) {
+    return { label: 'Offline', tone: 'danger' }
+  }
+  if (flags.paused) {
+    return { label: 'Paused', tone: 'warn' }
+  }
+  if (flags.pending) {
+    return { label: 'Pending', tone: 'warn' }
+  }
+  if (flags.engineConnected === false) {
+    return { label: 'Waiting', tone: 'warn' }
+  }
+  if (flags.attachedTabId !== undefined) {
+    return { label: 'Attached', tone: 'ok' }
+  }
+  return { label: 'Ready', tone: 'ok' }
 }
 
 function asCommandPayload(raw: unknown): CommandPayload {
@@ -80,20 +132,28 @@ async function refresh(): Promise<void> {
   const settings = isRecord(result.settings) ? result.settings : {}
   const paused = settings.paused === true
   const attached = result.attachedTabId
-  elementById('line').textContent = cockpitHeadline({
+  const flags: CockpitFlags = {
     hostConnected: payload.hostConnected,
     engineConnected: payload.engineConnected,
     paused,
     pending: Boolean(result.pending),
     attachedTabId: typeof attached === 'number' ? attached : undefined,
-  })
-  elementById('host').textContent = payload.hostConnected ? 'up' : 'down'
-  elementById('engine').textContent = payload.engineConnected ? 'live' : 'waiting'
+  }
+  elementById('line').textContent = cockpitHeadline(flags)
+  elementById('host').textContent = flags.hostConnected ? 'up' : 'down'
+  elementById('engine').textContent = flags.engineConnected ? 'live' : 'waiting'
   elementById('attach').textContent = paused
     ? 'paused'
     : attached === undefined
       ? 'none'
       : `tab ${attached}`
+  setDotTone('hostDot', flags.hostConnected ? 'on' : 'off')
+  setDotTone('engineDot', flags.engineConnected ? 'on' : 'warn')
+  setDotTone('attachDot', paused ? 'warn' : typeof attached === 'number' ? 'on' : 'idle')
+  const summary = summarize(flags)
+  elementById('stateText').textContent = summary.label
+  setPillTone('statePill', summary.tone)
+  setDotTone('stateDot', dotFor(summary.tone))
   elementById('resume').hidden = !paused
   elementById('kill').hidden = paused
 }

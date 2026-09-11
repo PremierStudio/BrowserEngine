@@ -11,6 +11,7 @@ import {
 export type CliCommand =
   | { readonly kind: 'mcp' }
   | { readonly kind: 'http' }
+  | { readonly kind: 'install-native-host'; readonly all: boolean }
   | {
       readonly kind: 'run'
       readonly path: string
@@ -27,6 +28,9 @@ export type CliCommand =
     }
   | { readonly kind: 'usage'; readonly error: string }
 
+/** Commands executed by the flow runner. The installer has its own runner. */
+type FlowCliCommand = Exclude<CliCommand, { kind: 'install-native-host' }>
+
 /** Injected IO so compile/run tests never touch the real filesystem. */
 export type FlowCliIo = {
   readFile: (path: string) => string
@@ -36,8 +40,9 @@ export type FlowCliIo = {
   runFile?: (file: FlowFile) => Promise<{ ok: true; steps: number }>
 }
 
-/** Printed when the argv is not mcp, http, run, or compile. */
-const FLOW_CLI_USAGE = 'usage: browser-engine run <file.json> | compile <file.json> | --http'
+/** Printed when the argv is not mcp, http, run, compile, or install-native-host. */
+const FLOW_CLI_USAGE =
+  'usage: browser-engine run <file.json> | compile <file.json> | install-native-host [--all] | --http'
 
 type FileCommand = Extract<CliCommand, { kind: 'run' } | { kind: 'compile' }>
 
@@ -99,6 +104,18 @@ function parseFileCommand(kind: 'run' | 'compile', rest: readonly string[]): Cli
   return { kind, path, json, report, junit }
 }
 
+function parseInstallCommand(rest: readonly string[]): CliCommand {
+  let all = false
+  for (const arg of rest) {
+    if (arg === '--all') {
+      all = true
+      continue
+    }
+    return { kind: 'usage', error: FLOW_CLI_USAGE }
+  }
+  return { kind: 'install-native-host', all }
+}
+
 function withoutEngineFlags(argv: readonly string[]): string[] {
   const kept: string[] = []
   for (let i = 0; i < argv.length; i += 1) {
@@ -121,6 +138,9 @@ export function parseCliCommand(argv: readonly string[]): CliCommand {
   const head = args[0]
   if (head === 'run' || head === 'compile') {
     return parseFileCommand(head, args.slice(1))
+  }
+  if (head === 'install-native-host') {
+    return parseInstallCommand(args.slice(1))
   }
   if (args.includes('--http')) {
     return { kind: 'http' }
@@ -170,8 +190,8 @@ function publish(command: FileCommand, report: FlowReport, io: FlowCliIo): numbe
   return 1
 }
 
-/** Compile or run a flow file. MCP and HTTP stay on the existing servers. */
-export async function executeFlowCli(command: CliCommand, io: FlowCliIo): Promise<number> {
+/** Compile or run a flow file. MCP, HTTP, and the installer have their own paths. */
+export async function executeFlowCli(command: FlowCliCommand, io: FlowCliIo): Promise<number> {
   if (command.kind === 'mcp' || command.kind === 'http') {
     io.writeErr(FLOW_CLI_USAGE)
     return 1
