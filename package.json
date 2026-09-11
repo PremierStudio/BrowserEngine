@@ -1,6 +1,6 @@
 {
   "name": "@premierstudio/browser-engine",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "An agent explores the product. CI replays the path with no AI. A broken step is a named report.",
   "license": "Apache-2.0",
