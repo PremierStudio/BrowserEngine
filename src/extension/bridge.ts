@@ -14,8 +14,18 @@ type Waiter = {
 
 /**
  * JSON-line RPC from the engine to one connected extension host.
+ *
+ * `rejectAll` is optional in the type so pre-existing fake bridges that only
+ * implement `request`/`receive` stay assignable; the real bridge always
+ * provides it.
  */
-export function createExtensionBridge(transport: BridgeTransport) {
+export type ExtensionBridge = {
+  request(method: ExtensionMethod, params?: Record<string, unknown>): Promise<unknown>
+  receive(line: string): void
+  rejectAll?: (error: Error) => void
+}
+
+export function createExtensionBridge(transport: BridgeTransport): ExtensionBridge {
   const waiters = new Map<string, Waiter>()
   let seq = 0
 
@@ -47,6 +57,12 @@ export function createExtensionBridge(transport: BridgeTransport) {
         return
       }
       waiter.resolve(response.result)
+    },
+    rejectAll(error: Error): void {
+      for (const waiter of waiters.values()) {
+        waiter.reject(error)
+      }
+      waiters.clear()
     },
   }
 }

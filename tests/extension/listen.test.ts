@@ -222,4 +222,99 @@ describe('listenExtensionSocket with a fake host', () => {
     expect(first.destroyed).toBe(false)
     expect(second.destroyed).toBe(false)
   })
+
+  it('rejects pending requests when the active host disconnects', async () => {
+    spyOnCreateServer()
+    const server = listenExtensionSocket(tempSocketPath())
+    const socket = new FakeSocket()
+    createdServer().emit('connection', socket)
+    const pending = server.bridge.request('ping')
+    socket.emit('close')
+    await expect(pending).rejects.toThrow(/extension disconnected/)
+    server.close()
+  })
+
+  it('does not reject pending requests when a replaced host disconnects', async () => {
+    spyOnCreateServer()
+    const server = listenExtensionSocket(tempSocketPath())
+    const host = createdServer()
+    const first = new FakeSocket()
+    const second = new FakeSocket()
+    host.emit('connection', first)
+    host.emit('connection', second)
+    const pending = server.bridge.request('ping')
+    first.emit('close')
+    let settled = 'pending'
+    pending.then(
+      () => {
+        settled = 'resolved'
+      },
+      () => {
+        settled = 'rejected'
+      },
+    )
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(settled).toBe('pending')
+    second.emit('data', `${JSON.stringify({ id: 'e1', ok: true, result: { pong: true } })}\n`)
+    await expect(pending).resolves.toEqual({ pong: true })
+    server.close()
+  })
+
+  it('rejects pending requests when close() tears the listener down', async () => {
+    spyOnCreateServer()
+    const server = listenExtensionSocket(tempSocketPath())
+    const socket = new FakeSocket()
+    createdServer().emit('connection', socket)
+    const pending = server.bridge.request('ping')
+    server.close()
+    await expect(pending).rejects.toThrow(/extension disconnected/)
+  })
+
+  it('accepts a fresh request after the active host disconnects and reconnects', async () => {
+    spyOnCreateServer()
+    const server = listenExtensionSocket(tempSocketPath())
+    const host = createdServer()
+    const first = new FakeSocket()
+    host.emit('connection', first)
+    const pending = server.bridge.request('ping')
+    first.emit('close')
+    await expect(pending).rejects.toThrow(/extension disconnected/)
+    const second = new FakeSocket()
+    host.emit('connection', second)
+    const fresh = server.bridge.request('tabs')
+    second.emit('data', `${JSON.stringify({ id: 'e2', ok: true, result: { tabs: [] } })}\n`)
+    await expect(fresh).resolves.toEqual({ tabs: [] })
+    server.close()
+  })
+
+  it('does not reject pending requests when the bridge has no rejectAll', async () => {
+    vi.resetModules()
+    vi.doMock('../../src/extension/bridge.js', () => ({
+      createExtensionBridge: () => ({
+        request: () => new Promise(() => undefined),
+        receive: () => undefined,
+      }),
+    }))
+    const { listenExtensionSocket: mockedListen } = await import('../../src/extension/listen.js')
+    spyOnCreateServer()
+    const server = mockedListen(tempSocketPath())
+    const socket = new FakeSocket()
+    createdServer().emit('connection', socket)
+    const pending = server.bridge.request('ping')
+    socket.emit('close')
+    server.close()
+    let settled = 'pending'
+    pending.then(
+      () => {
+        settled = 'resolved'
+      },
+      () => {
+        settled = 'rejected'
+      },
+    )
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(settled).toBe('pending')
+  })
 })

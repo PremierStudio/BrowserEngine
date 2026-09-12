@@ -160,7 +160,14 @@ amendments take precedence over the corresponding lines of `mvp.md`.
     to 100%.
 33. **One engine owns the bridge.** The native-host socket accepts a single live
     connection, and a second engine silently takes it over. `src/cli.ts` probes
-    the socket and refuses to start when another engine is live, and the tab is
-    grouped only when it is not already in a group, so a user's own tab group is
-    never disturbed. Service-worker reconnection is backed by a 30s alarm
-    watchdog so a dead host does not strand the bridge.
+    the socket and refuses to start when another engine is live, and honors
+    `BROWSER_ENGINE_SOCK` so a second engine can run on a private socket for
+    tests or parallel orchestrators. The tab is grouped only when it is not
+    already in a group, so a user's own tab group is never disturbed.
+    Service-worker reconnection is backed by a 30s alarm watchdog so a dead host
+    does not strand the bridge, and the bridge rejects in-flight requests when
+    the connection closes so a hung action can never wedge the engine.
+34. **Attach is frictionless by default.** `attachPolicy` defaults to `always`:
+    installing the extension and pointing the engine at a tab is enough. The
+    `prompt` and `allow-list` modes remain for operators who want a per-origin
+    gate. The kill switch and pause state apply in every mode.

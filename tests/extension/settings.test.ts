@@ -10,6 +10,7 @@ import {
 
 describe('parseSettings', () => {
   it('fills defaults for empty input', () => {
+    expect(DEFAULT_SETTINGS.attachPolicy).toBe('always')
     expect(parseSettings(undefined)).toEqual(DEFAULT_SETTINGS)
     expect(parseSettings(null)).toEqual(DEFAULT_SETTINGS)
     expect(parseSettings('nope')).toEqual(DEFAULT_SETTINGS)
@@ -234,6 +235,7 @@ describe('parseSettings', () => {
       expect(parsed.attachPolicy).toBe('allowlist')
       expect(parsed.observeDetail).toBe('outline')
       expect(parsed.backend).toBe('extension')
+      expect(parseSettings({ attachPolicy: 'always' }).attachPolicy).toBe('always')
     } finally {
       DEFAULT_SETTINGS.attachPolicy = originalAttachPolicy
       DEFAULT_SETTINGS.observeDetail = originalObserveDetail
@@ -295,7 +297,7 @@ describe('patchSettings', () => {
     })
     expect(next.paused).toBe(true)
     expect(next.allowedOrigins).toEqual(['https://nymbl.example'])
-    expect(next.attachPolicy).toBe('allowlist')
+    expect(next.attachPolicy).toBe('always')
   })
 
   it('keeps in-range numbers and ignores a non-object patch', () => {

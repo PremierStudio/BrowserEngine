@@ -46,8 +46,10 @@ Vivaldi, Opera). It drives **your** profile: no second browser, no
 6. Start the engine against your browser with
    `BROWSER_ENGINE_BACKEND=extension`.
 
-Attach policy defaults to **origin allow-list**. A new host prompts in the
-cockpit; Allow adds it. Kill (`Ctrl+Shift+U`) pauses attach/CDP.
+Attach policy defaults to **always**: the extension drives the tab you point
+it at with no prompt. Choose **prompt** or **allow-list** in the options page if
+you want a gate; a new origin then waits for Allow in the cockpit. Kill
+(`Ctrl+Shift+U`) pauses attach/CDP.
 
 ## Under remote control
 

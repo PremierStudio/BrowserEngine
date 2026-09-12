@@ -172,6 +172,11 @@ describe('createExtensionSession', () => {
   it('prompts on a new origin and attaches after allow adds it to the list', async () => {
     const { deps, attached } = fakeDeps([tab(4, 'https://evil.example/x', true)])
     const session = createExtensionSession(deps)
+    await session.handle({
+      id: '0',
+      method: 'settings',
+      params: { op: 'set', patch: { attachPolicy: 'allowlist' } },
+    })
     const first = session.handle({ id: '1', method: 'attach', params: { tabId: 4 } })
     const pending = await waitForPending(session)
     expect(pending).toEqual(
@@ -201,6 +206,11 @@ describe('createExtensionSession', () => {
   it('deny rejects a pending attach without adding the origin', async () => {
     const { deps, attached } = fakeDeps([tab(5, 'https://nope.example', true)])
     const session = createExtensionSession(deps)
+    await session.handle({
+      id: '0',
+      method: 'settings',
+      params: { op: 'set', patch: { attachPolicy: 'allowlist' } },
+    })
     const pending = session.handle({ id: '1', method: 'attach', params: { tabId: 5 } })
     await waitForPending(session)
     await session.handle({ id: '2', method: 'deny', params: { origin: 'https://nope.example' } })
@@ -296,6 +306,11 @@ describe('createExtensionSession', () => {
     expect(ping.result).toEqual({ pong: true, attachedTabId: undefined })
     const { deps: chromeDeps } = fakeDeps([tab(9, 'chrome://extensions', true)])
     const chromeSession = createExtensionSession(chromeDeps)
+    await chromeSession.handle({
+      id: 'c0',
+      method: 'settings',
+      params: { op: 'set', patch: { attachPolicy: 'prompt' } },
+    })
     const prompt = chromeSession.handle({ id: 'c1', method: 'attach', params: { tabId: 9 } })
     const pending = await waitForPending(chromeSession)
     expect(pending.origin).toBe('chrome://extensions')
@@ -399,6 +414,11 @@ describe('createExtensionSession', () => {
     ])
     deps.now = () => 42
     const session = createExtensionSession(deps)
+    await session.handle({
+      id: '0',
+      method: 'settings',
+      params: { op: 'set', patch: { attachPolicy: 'allowlist' } },
+    })
     const listed = await session.handle({ id: 'tabs', method: 'tabs' })
     expect(listed.result).toEqual(expect.arrayContaining([expect.objectContaining({ id: 1 })]))
     const first = session.handle({ id: '1', method: 'attach', params: { tabId: 1 } })

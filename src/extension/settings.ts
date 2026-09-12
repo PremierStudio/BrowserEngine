@@ -33,7 +33,7 @@ export type EngineSettings = {
 }
 
 export const DEFAULT_SETTINGS: EngineSettings = {
-  attachPolicy: 'allowlist',
+  attachPolicy: 'always',
   allowedOrigins: [],
   paused: false,
   autoAttachActiveTab: true,
@@ -75,7 +75,7 @@ export const SETTINGS_FIELDS: readonly SettingsField[] = [
     key: 'attachPolicy',
     group: 'Safety',
     label: 'Attach policy',
-    help: 'prompt every attach, allow-list known origins, or always attach.',
+    help: 'Always attach; prompt and allow-list are stricter options.',
     kind: 'enum',
     values: ['prompt', 'allowlist', 'always'],
   },

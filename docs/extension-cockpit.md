@@ -5,7 +5,8 @@ Edge, Vivaldi, Opera): a side panel where the browser exposes
 `chrome.sidePanel`, otherwise `panel.html` opens in a normal tab. The popup is
 a launcher; options are a full tab.
 
-- Attach defaults to an **origin allow-list** with a prompt on new hosts.
+- Attach defaults to **always** (drive with no prompt); switch to prompt or
+  allow-list in the options page for a stricter gate.
 - `Ctrl+Shift+E` toggles the cockpit, `Ctrl+Shift+U` pauses attach/CDP.
 - All APIs used (`chrome.debugger`, `tabs`, `storage`, `nativeMessaging`,
   `sidePanel` with fallback, `commands`) are shared across Chromium browsers;

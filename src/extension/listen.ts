@@ -40,6 +40,7 @@ export function listenExtensionSocket(sockPath: string = defaultExtensionSocketP
     socket.on('close', () => {
       if (conn === socket) {
         conn = undefined
+        bridge.rejectAll?.(new Error('extension disconnected'))
       }
     })
   })
@@ -47,6 +48,7 @@ export function listenExtensionSocket(sockPath: string = defaultExtensionSocketP
   return {
     bridge,
     close: () => {
+      bridge.rejectAll?.(new Error('extension disconnected'))
       conn?.destroy()
       server.close()
       try {

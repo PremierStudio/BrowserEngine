@@ -263,7 +263,7 @@ async function socketHasListener(sockPath: string): Promise<boolean> {
 }
 
 if (resolveBrowserOpenMode(process.env, process.argv).kind === 'extension') {
-  const sockPath = defaultExtensionSocketPath()
+  const sockPath = process.env.BROWSER_ENGINE_SOCK ?? defaultExtensionSocketPath()
   if (await socketHasListener(sockPath)) {
     process.stderr.write(
       `browser-engine: another engine already owns ${sockPath}.\n` +
@@ -271,7 +271,7 @@ if (resolveBrowserOpenMode(process.env, process.argv).kind === 'extension') {
     )
     process.exit(1)
   }
-  live.ext = listenExtensionSocket()
+  live.ext = listenExtensionSocket(sockPath)
 }
 
 const options = {

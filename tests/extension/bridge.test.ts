@@ -45,4 +45,34 @@ describe('createExtensionBridge', () => {
     await expect(pending).rejects.toThrow(/extension error/)
     expect(ids[0]).toContain('"id":"e1"')
   })
+
+  it('rejects every pending waiter with the given error and clears the map', async () => {
+    let seq = 0
+    const bridge = createExtensionBridge({
+      write: () => undefined,
+      nextId: () => `id-${(seq += 1)}`,
+    })
+    const first = bridge.request('ping')
+    const second = bridge.request('tabs')
+    const error = new Error('extension disconnected')
+    bridge.rejectAll?.(error)
+    await expect(first).rejects.toBe(error)
+    await expect(second).rejects.toBe(error)
+  })
+
+  it('ignores responses for rejected ids and accepts a fresh request afterwards', async () => {
+    const bridge = createExtensionBridge({
+      write: () => undefined,
+      nextId: () => 'id-1',
+    })
+    const first = bridge.request('ping')
+    bridge.rejectAll?.(new Error('extension disconnected'))
+    await expect(first).rejects.toThrow(/extension disconnected/)
+    // A late response for the rejected id must not resolve anything.
+    bridge.receive(encodeResponse({ id: 'id-1', ok: true, result: { pong: true } }))
+    // The same id is reusable, proving the waiter map was cleared.
+    const second = bridge.request('tabs')
+    bridge.receive(encodeResponse({ id: 'id-1', ok: true, result: { tabs: [] } }))
+    await expect(second).resolves.toEqual({ tabs: [] })
+  })
 })
