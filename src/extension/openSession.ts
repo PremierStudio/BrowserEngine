@@ -6,9 +6,25 @@ import { createExtensionPageLike } from './extensionPage.js'
 
 type Bridge = ReturnType<typeof createExtensionBridge>
 
-/** Attach the active browser tab and wrap it as a ContextPage. */
+/** A tab row as reported by the extension's `tabs` request. */
+type TabRow = {
+  id: number
+  title?: string
+  url?: string
+  active?: boolean
+}
+
+/** Attach an attachable tab and wrap it as a ContextPage. */
 export async function openExtensionContextPage(bridge: Bridge): Promise<ContextPage> {
-  await bridge.request('attach')
+  const raw = await bridge.request('tabs')
+  if (!isTabList(raw)) {
+    throw new Error('no attachable tab')
+  }
+  const target = pickAttachTarget(raw)
+  if (target === undefined) {
+    throw new Error('no attachable tab')
+  }
+  await bridge.request('attach', { tabId: target.id })
   const like = createExtensionPageLike({
     send: (method, params) => bridge.request('cdp', { method, params }),
   })
@@ -21,8 +37,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function isTabList(value: unknown): value is Array<{ id: number; title?: string; url?: string }> {
+function isTabList(value: unknown): value is TabRow[] {
   return Array.isArray(value)
+}
+
+function isHttpUrl(url: string | undefined): boolean {
+  return url !== undefined && (url.startsWith('http://') || url.startsWith('https://'))
+}
+
+/** Prefer the active http(s) tab; otherwise the first http(s) tab. */
+function pickAttachTarget(tabs: TabRow[]): TabRow | undefined {
+  for (const tab of tabs) {
+    if (tab.active === true && isHttpUrl(tab.url)) {
+      return tab
+    }
+  }
+  for (const tab of tabs) {
+    if (isHttpUrl(tab.url)) {
+      return tab
+    }
+  }
+  return undefined
 }
 
 /** Tab desk over chrome.tabs via the extension. */

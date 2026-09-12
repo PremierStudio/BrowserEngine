@@ -9,6 +9,7 @@
     "tabs",
     "nativeMessaging",
     "activeTab",
+    "scripting",
     "storage",
     "sidePanel",
     "commands",

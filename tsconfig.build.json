@@ -22,7 +22,6 @@
     "src/extension/options.ts",
     "src/extension/panel.ts",
     "src/extension/popup.ts",
-    "src/extension/session.ts",
-    "src/extension/settings.ts"
+    "src/extension/session.ts"
   ]
 }

@@ -149,6 +149,14 @@ function readTabId(result: unknown): number | undefined {
   return typeof tabId === 'number' && Number.isFinite(tabId) ? tabId : undefined
 }
 
+function readGroupId(result: unknown): number | undefined {
+  if (isRecord(result) === false) {
+    return undefined
+  }
+  const groupId = result.groupId
+  return typeof groupId === 'number' && Number.isFinite(groupId) ? groupId : undefined
+}
+
 async function hudAllowed(): Promise<boolean> {
   try {
     const stored = await chrome.storage.local.get('settings')
@@ -263,9 +271,30 @@ async function installHud(tabId: number): Promise<void> {
   await setHudState('active')
 }
 
+/**
+ * Remember the controlled tab in session storage so a later worker start can
+ * undo its visible leftovers if the engine dies before clearControlled()
+ * runs. The in-memory flow above stays the source of truth.
+ */
+async function persistControl(): Promise<void> {
+  const tabId = controlledTabId
+  if (tabId === undefined) {
+    return
+  }
+  try {
+    await chrome.storage.session.set({ control: { tabId, groupId: controlledGroupId } })
+  } catch {
+    // Session storage unavailable; the in-memory flow still works.
+  }
+}
+
 async function markControlled(tabId: number): Promise<void> {
+  if (controlledTabId !== undefined && controlledTabId !== tabId) {
+    await clearControlled()
+  }
   controlledTabId = tabId
   await paintChrome('active')
+  await persistControl()
   await installHud(tabId)
   broadcast()
 }
@@ -275,6 +304,11 @@ async function clearControlled(): Promise<void> {
   const groupId = controlledGroupId
   controlledTabId = undefined
   controlledGroupId = undefined
+  try {
+    await chrome.storage.session.remove('control')
+  } catch {
+    // Storage unavailable; a stale record is reconciled on the next start.
+  }
   if (tabId === undefined) {
     return
   }
@@ -317,6 +351,71 @@ async function clearControlled(): Promise<void> {
     // Tab gone.
   }
   broadcast()
+}
+
+/**
+ * Service-worker start: undo leftovers a dead worker could not clean up.
+ * When the engine process dies abruptly the worker may be suspended before
+ * clearControlled() finishes, so the controlled tab keeps its group, badge
+ * and '● ' title marker. Every step is best-effort and must never throw.
+ */
+async function reconcileLeftovers(): Promise<void> {
+  let control: unknown
+  try {
+    const stored = await chrome.storage.session.get('control')
+    control = stored.control
+  } catch {
+    // Session storage unavailable; nothing persisted to reconcile.
+    return
+  }
+  const tabId = readTabId(control)
+  const groupId = readGroupId(control)
+  if (tabId === undefined) {
+    // Nothing actionable (or a corrupt record): just drop the stale key.
+    try {
+      await chrome.storage.session.remove('control')
+    } catch {
+      // Storage unavailable.
+    }
+    return
+  }
+  if (groupId !== undefined) {
+    try {
+      await chrome.tabs.ungroup(tabId)
+    } catch {
+      // Tab closed or grouping unsupported.
+    }
+  }
+  try {
+    await chrome.action.setBadgeText({ tabId, text: '' })
+  } catch {
+    // Tab gone.
+  }
+  try {
+    // Self-contained on purpose: executeScript serializes the function, so it
+    // cannot close over the TITLE_MARK constant from hudTitle.ts.
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const mark = '● '
+        if (document.title.startsWith(mark)) {
+          document.title = document.title.slice(mark.length)
+        }
+      },
+    })
+  } catch {
+    // Tab closed or a page that forbids injection.
+  }
+  try {
+    // Only drop the record if it is still the one we just cleaned up; a fresh
+    // control may have been persisted while we were reconciling.
+    const stored = await chrome.storage.session.get('control')
+    if (readTabId(stored.control) === tabId && readGroupId(stored.control) === groupId) {
+      await chrome.storage.session.remove('control')
+    }
+  } catch {
+    // Storage unavailable.
+  }
 }
 
 async function handleControlTraffic(request: SessionRequest, reply: SessionReply): Promise<void> {
@@ -517,4 +616,5 @@ chrome.runtime.onInstalled.addListener(() => {
 })
 
 connectNative()
+void reconcileLeftovers()
 void refreshBadge()

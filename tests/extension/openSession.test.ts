@@ -4,39 +4,81 @@ import {
   openExtensionContextPage,
 } from '../../src/extension/openSession.js'
 
+type RecordedCall = { method: string; params?: unknown }
+
+/** Fake bridge that answers `tabs` with the given payload and records calls. */
+function bridgeReturningTabs(tabs: unknown) {
+  const calls: RecordedCall[] = []
+  const bridge = {
+    request: async (method: string, params?: unknown) => {
+      calls.push({ method, params })
+      if (method === 'tabs') {
+        return tabs
+      }
+      return {}
+    },
+    receive: () => undefined,
+  }
+  return { bridge, calls }
+}
+
 describe('openExtensionContextPage', () => {
-  it('attaches the active tab before returning a ContextPage', async () => {
-    const methods: string[] = []
-    const page = await openExtensionContextPage({
-      request: async (method) => {
-        methods.push(method)
-        return {}
-      },
-      receive: () => undefined,
-    })
-    expect(methods).toEqual(['attach'])
+  it('picks the active http(s) tab and attaches with its tabId before returning a ContextPage', async () => {
+    const { bridge, calls } = bridgeReturningTabs([
+      { id: 1, title: 'First', url: 'https://first.example', active: false },
+      { id: 2, title: 'Active', url: 'https://active.example', active: true },
+    ])
+    const page = await openExtensionContextPage(bridge)
+    expect(calls).toEqual([
+      { method: 'tabs', params: undefined },
+      { method: 'attach', params: { tabId: 2 } },
+    ])
     expect(typeof page.observe).toBe('function')
     await page.navigate('https://example.test')
-    expect(methods).toContain('cdp')
+    expect(calls).toContainEqual({
+      method: 'cdp',
+      params: { method: 'Page.navigate', params: { url: 'https://example.test' } },
+    })
   })
 
-  it('forwards cdp method and params through the bridge', async () => {
-    const calls: Array<{ method: string; params?: unknown }> = []
-    const page = await openExtensionContextPage({
-      request: async (method, params) => {
-        calls.push({ method, params })
-        return {}
-      },
-      receive: () => undefined,
-    })
-    await page.navigate('https://example.test/next')
-    expect(calls).toEqual([
-      { method: 'attach', params: undefined },
-      {
-        method: 'cdp',
-        params: { method: 'Page.navigate', params: { url: 'https://example.test/next' } },
-      },
+  it('falls back to the first http(s) tab when the active tab is internal', async () => {
+    const { bridge, calls } = bridgeReturningTabs([
+      { id: 1, title: 'New tab', url: 'chrome://newtab', active: true },
+      { id: 4 },
+      { id: 2, title: 'Plain', url: 'http://plain.example', active: false },
+      { id: 3, title: 'Secure', url: 'https://secure.example', active: false },
+      { id: 5, active: true },
     ])
+    await openExtensionContextPage(bridge)
+    expect(calls).toEqual([
+      { method: 'tabs', params: undefined },
+      { method: 'attach', params: { tabId: 2 } },
+    ])
+  })
+
+  it('never sends a bare attach without a tabId', async () => {
+    const { bridge, calls } = bridgeReturningTabs([
+      { id: 7, title: 'Nymbl', url: 'https://nymbl.example', active: true },
+    ])
+    await openExtensionContextPage(bridge)
+    const attach = calls.find((call) => call.method === 'attach')
+    expect(attach).toEqual({ method: 'attach', params: { tabId: 7 } })
+    expect(calls.some((call) => call.method === 'attach' && call.params === undefined)).toBe(false)
+  })
+
+  it('throws when there is no attachable tab', async () => {
+    const payloads: unknown[] = [
+      [],
+      [
+        { id: 1, title: 'Blank', url: 'about:blank', active: true },
+        { id: 2, title: 'Devtools', url: 'devtools://devtools', active: false },
+      ],
+      { nope: true },
+    ]
+    for (const payload of payloads) {
+      const { bridge } = bridgeReturningTabs(payload)
+      await expect(openExtensionContextPage(bridge)).rejects.toThrow(/no attachable tab/)
+    }
   })
 })
 
